@@ -8,20 +8,19 @@ server:
   app: elysia
   server: backend
   service:
-    # HelloWorld tRPC 服务
-    - name: trpc.elysia.backend.helloworld
+    # User http 服务
+    - name: trpc.elysia.backend.user
       ip: 127.0.0.1
       port: 8000
       network: tcp
-      protocol: trpc
+      protocol: http_no_protocol
       timeout: 3000
-    
-    # User tRPC 服务
-    - name: trpc.elysia.backend.user
+    # Auth http 服务
+    - name: trpc.elysia.backend.auth
       ip: 127.0.0.1
       port: 8001
       network: tcp
-      protocol: trpc
+      protocol: http_no_protocol
       timeout: 3000
     
     # HTTP REST API 服务
@@ -29,7 +28,7 @@ server:
       ip: 0.0.0.0
       port: 8080
       network: tcp
-      protocol: http
+      protocol: http_no_protocol
       timeout: 3000
 
   # 管理端口配置

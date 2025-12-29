@@ -32,15 +32,14 @@ func registerUser(router *mux.Router) {
 // createUserHandler 创建用户处理器
 func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-
 	// 设置响应头
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	// 解析请求体
-	var req pb.CreateUserRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	req := &pb.CreateUserRequest{}
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
 		// 构建错误响应
 		errResp := &errs.BaseResponse{
 			Data:  nil,
@@ -53,7 +52,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 调用服务
-	resp, err := userService.CreateUser(ctx, &req)
+	resp, err := userService.CreateUser(ctx, req)
 	if err != nil {
 		// 构建错误响应
 		errResp := &errs.BaseResponse{
@@ -122,8 +121,8 @@ func updateUserHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	// 解析请求体
-	var req pb.UpdateUserRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	req := &pb.UpdateUserRequest{}
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
 		// 构建错误响应
 		errResp := &errs.BaseResponse{
 			Data:  nil,
@@ -136,7 +135,7 @@ func updateUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 调用服务
-	resp, err := userService.UpdateUser(ctx, &req)
+	resp, err := userService.UpdateUser(ctx, req)
 	if err != nil {
 		// 构建错误响应
 		errResp := &errs.BaseResponse{
@@ -165,8 +164,8 @@ func deleteUserHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	// 解析请求体
-	var req pb.DeleteUserRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	req := &pb.DeleteUserRequest{}
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
 		// 构建错误响应
 		errResp := &errs.BaseResponse{
 			Data:  nil,
@@ -179,7 +178,7 @@ func deleteUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 调用服务
-	resp, err := userService.DeleteUser(ctx, &req)
+	resp, err := userService.DeleteUser(ctx, req)
 	if err != nil {
 		// 构建错误响应
 		errResp := &errs.BaseResponse{
@@ -208,8 +207,8 @@ func listUsersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	// 解析请求体
-	var req pb.ListUsersRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	req := &pb.ListUsersRequest{}
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
 		// 构建错误响应
 		errResp := &errs.BaseResponse{
 			Data:  nil,
@@ -222,7 +221,7 @@ func listUsersHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 调用服务
-	resp, err := userService.ListUsers(ctx, &req)
+	resp, err := userService.ListUsers(ctx, req)
 	if err != nil {
 		// 构建错误响应
 		errResp := &errs.BaseResponse{

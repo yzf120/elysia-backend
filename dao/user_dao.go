@@ -12,14 +12,14 @@ type UserDAO interface {
 	// CreateUser 创建用户
 	CreateUser(user *model.User) error
 
-	// GetUserByID 根据用户ID查询用户
-	GetUserByID(userID string) (*model.User, error)
+	// GetUserById 根据用户ID查询用户
+	GetUserById(userId string) (*model.User, error)
 
 	// GetUserByPhoneNumber 根据手机号查询用户
 	GetUserByPhoneNumber(phoneNumber string) (*model.User, error)
 
-	// GetUserByWxOpenID 根据微信openID查询用户
-	GetUserByWxOpenID(wxOpenID string) (*model.User, error)
+	// GetUserByWxOpenId 根据微信openID查询用户
+	GetUserByWxOpenId(wxOpenId string) (*model.User, error)
 
 	// CheckPhoneExists 检查手机号是否存在
 	CheckPhoneExists(phoneNumber string) (bool, error)
@@ -57,10 +57,10 @@ func (d *userDAOImpl) CreateUser(user *model.User) error {
 	return nil
 }
 
-// GetUserByID 根据用户ID查询用户
-func (d *userDAOImpl) GetUserByID(userID string) (*model.User, error) {
+// GetUserById 根据用户ID查询用户
+func (d *userDAOImpl) GetUserById(userId string) (*model.User, error) {
 	var user model.User
-	err := d.db.Where("user_id = ?", userID).First(&user).Error
+	err := d.db.Where("user_id = ?", userId).First(&user).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
@@ -83,10 +83,10 @@ func (d *userDAOImpl) GetUserByPhoneNumber(phoneNumber string) (*model.User, err
 	return &user, nil
 }
 
-// GetUserByWxOpenID 根据微信openID查询用户
-func (d *userDAOImpl) GetUserByWxOpenID(wxOpenID string) (*model.User, error) {
+// GetUserByWxOpenId 根据微信openID查询用户
+func (d *userDAOImpl) GetUserByWxOpenId(wxOpenId string) (*model.User, error) {
 	var user model.User
-	err := d.db.Where("wx_mini_app_open_id = ?", wxOpenID).First(&user).Error
+	err := d.db.Where("wx_mini_app_open_id = ?", wxOpenId).First(&user).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil

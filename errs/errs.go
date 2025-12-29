@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -126,6 +127,7 @@ const (
 	ErrSetParentModelOverLimit                       // 设置家长模式超过频率限制
 	ErrTencentDocUnauthorized                        // 腾讯文档帐号未授权（ps：该错误码端有特殊逻辑，不可修改，原值：20036）
 	ErrLoginStatusRedis                      = 20051 // 鉴权redis错误，这种场景api返回504，不退出登录
+	ErrSmsCodeInCollect
 )
 
 // 腾讯文档错误码
@@ -262,6 +264,7 @@ var ErrorMessages = map[int]string{
 	ErrExternalSdTaskFail:                   "账号安全检测失败",
 	ErrGeneralShareVoiceRecordUidIsNotMatch: "通用分享的用户ID不匹配",
 	ErrGeneralShareVoiceRecordUidIsEmpty:    "通用分享的用户ID为空",
+	ErrSmsCodeInCollect:                     "验证码错误",
 }
 
 // BatchHistoryListClear 错误码定义
@@ -357,12 +360,47 @@ func NewErrorResponse(code int, msg string) string {
 	return string(jsonStr)
 }
 
+func (c *CommonError) Error() string {
+	return c.Message
+}
 func NewCommonError(code int, msg string) *CommonError {
 	return &CommonError{
 		Code:    strconv.Itoa(code),
 		Message: msg,
 		Msg:     msg,
 	}
+}
+
+// ParseCommonError 解析 CommonError.Error() 返回的错误字符串
+// 格式: "[code]message" 例如: "[21013]内部数据库或RPC调用错误"
+// 返回: code (int), message (string)
+// 如果解析失败，返回 0 和原始错误字符串
+func ParseCommonError(errStr string) (int, string) {
+	// 检查格式是否为 "[code]message"
+	if !strings.HasPrefix(errStr, "[") {
+		return 1, errStr
+	}
+
+	// 查找右括号的位置
+	closeBracketIdx := strings.Index(errStr, "]")
+	if closeBracketIdx == -1 {
+		return 1, errStr
+	}
+
+	// 提取 code 部分
+	codeStr := errStr[1:closeBracketIdx]
+	code, err := strconv.Atoi(codeStr)
+	if err != nil {
+		return 1, errStr
+	}
+
+	// 提取 message 部分
+	message := ""
+	if closeBracketIdx+1 < len(errStr) {
+		message = errStr[closeBracketIdx+1:]
+	}
+
+	return code, message
 }
 
 func NewCommonErrorData[T any](code int, msg string, data *T) *CommonErrorData[T] {

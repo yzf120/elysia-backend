@@ -1,15 +1,16 @@
 package main
 
 import (
-	"github.com/yzf120/elysia-backend/proto/helloworld"
+	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
+	"github.com/yzf120/elysia-backend/client"
+	"github.com/yzf120/elysia-backend/dao"
 	pb "github.com/yzf120/elysia-backend/proto/user"
 	"github.com/yzf120/elysia-backend/router"
 	"github.com/yzf120/elysia-backend/service_impl"
 	"log"
-
-	"github.com/joho/godotenv"
-	"github.com/yzf120/elysia-backend/dao"
 	"trpc.group/trpc-go/trpc-go"
+	thttp "trpc.group/trpc-go/trpc-go/http"
 )
 
 func main() {
@@ -26,16 +27,26 @@ func main() {
 	}
 	defer dao.CloseDB()
 
+	// 初始化Redis
+	err = client.InitRedisClient()
+	if err != nil {
+		log.Fatalf("Redis初始化失败: %v", err)
+	}
+	defer client.GetRedisClient().Close()
+
+	r := mux.NewRouter()
+	router.RegisterRouter(r)
+
 	// 创建trpc服务器
 	s := trpc.NewServer()
 
-	// 注册helloworld服务
-	helloworld.RegisterGreeterService(s.Service("trpc.elysia.backend.helloworld"),
-		&service_impl.HelloWorldImpl{})
-
-	// 注册用户服务
+	// 注册RPC服务
 	pb.RegisterUserServiceService(s.Service("trpc.elysia.backend.user"),
 		service_impl.NewUserServiceImpl())
+
+	// 注册http服务
+	thttp.RegisterNoProtocolServiceMux(s.Service("trpc.elysia.backend.user"), r)
+	thttp.RegisterNoProtocolServiceMux(s.Service("trpc.elysia.backend.auth"), r)
 
 	router.Init()
 

@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"github.com/yzf120/elysia-backend/errs"
 	"time"
 
 	"github.com/yzf120/elysia-backend/dao"
@@ -26,22 +27,22 @@ func NewUserService() *UserService {
 func (s *UserService) CreateUser(req *pb.CreateUserRequest) (*pb.User, error) {
 	// 参数校验
 	if err := s.validateCreateUserRequest(req); err != nil {
-		return nil, err
+		return nil, errs.NewCommonError(errs.ErrBadRequest, err.Error())
 	}
 
 	// 检查手机号是否已存在
 	exists, err := s.userDAO.CheckPhoneExists(req.PhoneNumber)
 	if err != nil {
-		return nil, fmt.Errorf("检查手机号失败: %v", err)
+		return nil, errs.NewCommonError(errs.ErrInternal, err.Error())
 	}
 	if exists {
-		return nil, fmt.Errorf("手机号已被注册")
+		return nil, errs.NewCommonError(errs.ErrBadRequest, "手机号已被注册")
 	}
 
 	// 密码加密
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, fmt.Errorf("密码加密失败: %v", err)
+		return nil, errs.NewCommonError(errs.ErrInternal, err.Error())
 	}
 
 	// 生成用户ID
@@ -49,13 +50,13 @@ func (s *UserService) CreateUser(req *pb.CreateUserRequest) (*pb.User, error) {
 
 	// 构建用户模型
 	userModel := &model.User{
-		UserID:          userID,
+		UserId:          userID,
 		UserName:        req.UserName,
 		Password:        string(hashedPassword),
 		Email:           req.Email,
 		Gender:          req.Gender,
 		PhoneNumber:     req.PhoneNumber,
-		WxMiniAppOpenID: req.WxMiniAppOpenId,
+		WxMiniAppOpenId: req.WxMiniAppOpenId,
 		ChineseName:     req.ChineseName,
 		ImageURL:        req.ImageUrl,
 		RegisterSource:  req.RegisterSource,
@@ -69,7 +70,7 @@ func (s *UserService) CreateUser(req *pb.CreateUserRequest) (*pb.User, error) {
 	}
 
 	// 查询创建的用户
-	createdUser, err := s.userDAO.GetUserByID(userID)
+	createdUser, err := s.userDAO.GetUserById(userID)
 	if err != nil {
 		return nil, fmt.Errorf("查询用户失败: %v", err)
 	}
@@ -89,11 +90,11 @@ func (s *UserService) GetUser(req *pb.GetUserRequest) (*pb.User, error) {
 
 	// 根据不同条件查询
 	if req.UserId != "" {
-		userModel, err = s.userDAO.GetUserByID(req.UserId)
+		userModel, err = s.userDAO.GetUserById(req.UserId)
 	} else if req.PhoneNumber != "" {
 		userModel, err = s.userDAO.GetUserByPhoneNumber(req.PhoneNumber)
 	} else if req.WxMiniAppOpenId != "" {
-		userModel, err = s.userDAO.GetUserByWxOpenID(req.WxMiniAppOpenId)
+		userModel, err = s.userDAO.GetUserByWxOpenId(req.WxMiniAppOpenId)
 	}
 
 	if err != nil {
@@ -115,7 +116,7 @@ func (s *UserService) UpdateUser(req *pb.UpdateUserRequest) (*pb.User, error) {
 	}
 
 	// 检查用户是否存在
-	existingUser, err := s.userDAO.GetUserByID(req.UserId)
+	existingUser, err := s.userDAO.GetUserById(req.UserId)
 	if err != nil {
 		return nil, fmt.Errorf("查询用户失败: %v", err)
 	}
@@ -160,7 +161,7 @@ func (s *UserService) UpdateUser(req *pb.UpdateUserRequest) (*pb.User, error) {
 	}
 
 	// 查询更新后的用户
-	updatedUser, err := s.userDAO.GetUserByID(req.UserId)
+	updatedUser, err := s.userDAO.GetUserById(req.UserId)
 	if err != nil {
 		return nil, fmt.Errorf("查询用户失败: %v", err)
 	}
@@ -176,7 +177,7 @@ func (s *UserService) DeleteUser(req *pb.DeleteUserRequest) error {
 	}
 
 	// 检查用户是否存在
-	existingUser, err := s.userDAO.GetUserByID(req.UserId)
+	existingUser, err := s.userDAO.GetUserById(req.UserId)
 	if err != nil {
 		return fmt.Errorf("查询用户失败: %v", err)
 	}
@@ -279,12 +280,12 @@ func (s *UserService) convertModelToProto(model *model.User) *pb.User {
 		return nil
 	}
 	return &pb.User{
-		UserId:          model.UserID,
+		UserId:          model.UserId,
 		UserName:        model.UserName,
 		Email:           model.Email,
 		Gender:          model.Gender,
 		PhoneNumber:     model.PhoneNumber,
-		WxMiniAppOpenId: model.WxMiniAppOpenID,
+		WxMiniAppOpenId: model.WxMiniAppOpenId,
 		ChineseName:     model.ChineseName,
 		RiskLevel:       model.RiskLevel,
 		Status:          model.Status,

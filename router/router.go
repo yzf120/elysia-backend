@@ -3,17 +3,16 @@ package router
 import "github.com/gorilla/mux"
 
 func Init() {
-	router := mux.NewRouter()
-	registerRouter(router)
-
 }
-func registerRouter(router *mux.Router) {
+func RegisterRouter(router *mux.Router) {
 	// 统一鉴权
 	middlewares := []mux.MiddlewareFunc{}
 	router.Use(middlewares...)
 	registerApiRouter(router)
 }
 func registerApiRouter(router *mux.Router) {
+	// 注册认证相关接口
+	registerAuth(router)
 	// 注册会话相关的
 	registerConversation(router)
 	// 注册群聊相关的
