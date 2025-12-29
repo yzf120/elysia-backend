@@ -1,0 +1,417 @@
+### 用户管理 API 测试请求
+
+# 基础配置
+@baseUrl = http://localhost:8001
+@contentType = application/json
+
+###############################################
+# 1. 创建用户
+###############################################
+
+### 1.1 创建用户 - 成功
+POST {{baseUrl}}/api/user/create
+Content-Type: {{contentType}}
+
+{
+  "phone_number": "13800138000",
+  "nickname": "张三",
+  "avatar": "https://example.com/avatar/zhangsan.jpg",
+  "gender": 1,
+  "wx_mini_app_open_id": "wx_openid_123456"
+}
+
+### 1.2 创建用户 - 只有必填字段
+POST {{baseUrl}}/api/user/create
+Content-Type: {{contentType}}
+
+{
+  "phone_number": "13800138001",
+  "nickname": "李四"
+}
+
+### 1.3 创建用户 - 女性用户
+POST {{baseUrl}}/api/user/create
+Content-Type: {{contentType}}
+
+{
+  "phone_number": "13800138002",
+  "nickname": "王小美",
+  "avatar": "https://example.com/avatar/wangxiaomei.jpg",
+  "gender": 2,
+  "wx_mini_app_open_id": "wx_openid_789012"
+}
+
+### 1.4 创建用户 - 缺少必填字段（测试错误处理）
+POST {{baseUrl}}/api/user/create
+Content-Type: {{contentType}}
+
+{
+  "nickname": "测试用户"
+}
+
+### 1.5 创建用户 - 无效的 JSON（测试错误处理）
+POST {{baseUrl}}/api/user/create
+Content-Type: {{contentType}}
+
+{
+  "phone_number": "13800138000"
+  "nickname": "错误格式"
+}
+
+###############################################
+# 2. 获取用户信息
+###############################################
+
+### 2.1 通过用户ID获取
+GET {{baseUrl}}/api/user/get?user_id=user_123456
+Content-Type: {{contentType}}
+
+### 2.2 通过手机号获取
+GET {{baseUrl}}/api/user/get?phone_number=13800138000
+Content-Type: {{contentType}}
+
+### 2.3 通过微信OpenID获取
+GET {{baseUrl}}/api/user/get?wx_mini_app_open_id=wx_openid_123456
+Content-Type: {{contentType}}
+
+### 2.4 获取不存在的用户（测试错误处理）
+GET {{baseUrl}}/api/user/get?user_id=nonexistent_user
+Content-Type: {{contentType}}
+
+### 2.5 不提供任何查询参数（测试错误处理）
+GET {{baseUrl}}/api/user/get
+Content-Type: {{contentType}}
+
+###############################################
+# 3. 更新用户信息
+###############################################
+
+### 3.1 更新用户昵称
+POST {{baseUrl}}/api/user/update
+Content-Type: {{contentType}}
+
+{
+  "user_id": "user_123456",
+  "nickname": "新昵称"
+}
+
+### 3.2 更新用户头像
+POST {{baseUrl}}/api/user/update
+Content-Type: {{contentType}}
+
+{
+  "user_id": "user_123456",
+  "avatar": "https://example.com/avatar/new_avatar.jpg"
+}
+
+### 3.3 更新用户性别
+POST {{baseUrl}}/api/user/update
+Content-Type: {{contentType}}
+
+{
+  "user_id": "user_123456",
+  "gender": 2
+}
+
+### 3.4 更新多个字段
+POST {{baseUrl}}/api/user/update
+Content-Type: {{contentType}}
+
+{
+  "user_id": "user_123456",
+  "nickname": "完整更新",
+  "avatar": "https://example.com/avatar/complete.jpg",
+  "gender": 1
+}
+
+### 3.5 更新手机号
+POST {{baseUrl}}/api/user/update
+Content-Type: {{contentType}}
+
+{
+  "user_id": "user_123456",
+  "phone_number": "13900139000"
+}
+
+### 3.6 更新微信OpenID
+POST {{baseUrl}}/api/user/update
+Content-Type: {{contentType}}
+
+{
+  "user_id": "user_123456",
+  "wx_mini_app_open_id": "wx_new_openid_999"
+}
+
+### 3.7 更新不存在的用户（测试错误处理）
+POST {{baseUrl}}/api/user/update
+Content-Type: {{contentType}}
+
+{
+  "user_id": "nonexistent_user",
+  "nickname": "不存在的用户"
+}
+
+### 3.8 缺少用户ID（测试错误处理）
+POST {{baseUrl}}/api/user/update
+Content-Type: {{contentType}}
+
+{
+  "nickname": "缺少ID"
+}
+
+###############################################
+# 4. 删除用户
+###############################################
+
+### 4.1 删除用户 - 成功
+POST {{baseUrl}}/api/user/delete
+Content-Type: {{contentType}}
+
+{
+  "user_id": "user_to_delete"
+}
+
+### 4.2 删除不存在的用户（测试错误处理）
+POST {{baseUrl}}/api/user/delete
+Content-Type: {{contentType}}
+
+{
+  "user_id": "nonexistent_user"
+}
+
+### 4.3 缺少用户ID（测试错误处理）
+POST {{baseUrl}}/api/user/delete
+Content-Type: {{contentType}}
+
+{
+}
+
+###############################################
+# 5. 查询用户列表
+###############################################
+
+### 5.1 查询所有用户 - 第一页
+POST {{baseUrl}}/api/user/list
+Content-Type: {{contentType}}
+
+{
+  "page": 1,
+  "page_size": 10
+}
+
+### 5.2 查询所有用户 - 第二页
+POST {{baseUrl}}/api/user/list
+Content-Type: {{contentType}}
+
+{
+  "page": 2,
+  "page_size": 10
+}
+
+### 5.3 查询所有用户 - 大分页
+POST {{baseUrl}}/api/user/list
+Content-Type: {{contentType}}
+
+{
+  "page": 1,
+  "page_size": 50
+}
+
+### 5.4 按性别筛选 - 男性
+POST {{baseUrl}}/api/user/list
+Content-Type: {{contentType}}
+
+{
+  "page": 1,
+  "page_size": 10,
+  "gender": 1
+}
+
+### 5.5 按性别筛选 - 女性
+POST {{baseUrl}}/api/user/list
+Content-Type: {{contentType}}
+
+{
+  "page": 1,
+  "page_size": 10,
+  "gender": 2
+}
+
+### 5.6 按手机号筛选
+POST {{baseUrl}}/api/user/list
+Content-Type: {{contentType}}
+
+{
+  "page": 1,
+  "page_size": 10,
+  "phone_number": "13800138000"
+}
+
+### 5.7 按昵称模糊搜索
+POST {{baseUrl}}/api/user/list
+Content-Type: {{contentType}}
+
+{
+  "page": 1,
+  "page_size": 10,
+  "nickname": "张"
+}
+
+### 5.8 组合查询 - 性别 + 昵称
+POST {{baseUrl}}/api/user/list
+Content-Type: {{contentType}}
+
+{
+  "page": 1,
+  "page_size": 10,
+  "gender": 1,
+  "nickname": "张"
+}
+
+### 5.9 按创建时间排序
+POST {{baseUrl}}/api/user/list
+Content-Type: {{contentType}}
+
+{
+  "page": 1,
+  "page_size": 10,
+  "order_by": "created_at",
+  "order_desc": true
+}
+
+### 5.10 按更新时间排序
+POST {{baseUrl}}/api/user/list
+Content-Type: {{contentType}}
+
+{
+  "page": 1,
+  "page_size": 10,
+  "order_by": "updated_at",
+  "order_desc": true
+}
+
+### 5.11 无效的分页参数（测试错误处理）
+POST {{baseUrl}}/api/user/list
+Content-Type: {{contentType}}
+
+{
+  "page": 0,
+  "page_size": -1
+}
+
+### 5.12 缺少分页参数（测试默认值）
+POST {{baseUrl}}/api/user/list
+Content-Type: {{contentType}}
+
+{
+}
+
+###############################################
+# 6. 完整流程测试
+###############################################
+
+### 6.1 步骤1: 创建新用户
+POST {{baseUrl}}/api/user/create
+Content-Type: {{contentType}}
+
+{
+  "phone_number": "13900139999",
+  "nickname": "流程测试用户",
+  "avatar": "https://example.com/avatar/test.jpg",
+  "gender": 1,
+  "wx_mini_app_open_id": "wx_test_flow_001"
+}
+
+### 6.2 步骤2: 获取刚创建的用户（使用返回的user_id）
+GET {{baseUrl}}/api/user/get?phone_number=13900139999
+Content-Type: {{contentType}}
+
+### 6.3 步骤3: 更新用户信息
+POST {{baseUrl}}/api/user/update
+Content-Type: {{contentType}}
+
+{
+  "user_id": "从步骤1返回的user_id",
+  "nickname": "更新后的昵称",
+  "gender": 2
+}
+
+### 6.4 步骤4: 再次获取用户验证更新
+GET {{baseUrl}}/api/user/get?phone_number=13900139999
+Content-Type: {{contentType}}
+
+### 6.5 步骤5: 查询用户列表验证存在
+POST {{baseUrl}}/api/user/list
+Content-Type: {{contentType}}
+
+{
+  "page": 1,
+  "page_size": 10,
+  "phone_number": "13900139999"
+}
+
+### 6.6 步骤6: 删除用户
+POST {{baseUrl}}/api/user/delete
+Content-Type: {{contentType}}
+
+{
+  "user_id": "从步骤1返回的user_id"
+}
+
+### 6.7 步骤7: 验证用户已删除
+GET {{baseUrl}}/api/user/get?phone_number=13900139999
+Content-Type: {{contentType}}
+
+###############################################
+# 7. 压力测试（批量创建）
+###############################################
+
+### 7.1 批量创建用户 - 用户1
+POST {{baseUrl}}/api/user/create
+Content-Type: {{contentType}}
+
+{
+  "phone_number": "13800000001",
+  "nickname": "批量用户001",
+  "gender": 1
+}
+
+### 7.2 批量创建用户 - 用户2
+POST {{baseUrl}}/api/user/create
+Content-Type: {{contentType}}
+
+{
+  "phone_number": "13800000002",
+  "nickname": "批量用户002",
+  "gender": 2
+}
+
+### 7.3 批量创建用户 - 用户3
+POST {{baseUrl}}/api/user/create
+Content-Type: {{contentType}}
+
+{
+  "phone_number": "13800000003",
+  "nickname": "批量用户003",
+  "gender": 1
+}
+
+### 7.4 批量创建用户 - 用户4
+POST {{baseUrl}}/api/user/create
+Content-Type: {{contentType}}
+
+{
+  "phone_number": "13800000004",
+  "nickname": "批量用户004",
+  "gender": 2
+}
+
+### 7.5 批量创建用户 - 用户5
+POST {{baseUrl}}/api/user/create
+Content-Type: {{contentType}}
+
+{
+  "phone_number": "13800000005",
+  "nickname": "批量用户005",
+  "gender": 1
+}

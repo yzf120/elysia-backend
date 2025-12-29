@@ -2,6 +2,7 @@ package service_impl
 
 import (
 	"context"
+	"github.com/yzf120/elysia-backend/errs"
 
 	pb "github.com/yzf120/elysia-backend/proto/user"
 	"github.com/yzf120/elysia-backend/service"
@@ -24,9 +25,10 @@ func (s *UserServiceImpl) CreateUser(ctx context.Context, req *pb.CreateUserRequ
 	// 调用service层处理业务逻辑
 	user, err := s.userService.CreateUser(req)
 	if err != nil {
+		code, msg := errs.ParseCommonError(err.Error())
 		return &pb.CreateUserResponse{
-			Code:    500,
-			Message: err.Error(),
+			Code:    int32(code),
+			Message: msg,
 		}, nil
 	}
 
@@ -42,13 +44,10 @@ func (s *UserServiceImpl) GetUser(ctx context.Context, req *pb.GetUserRequest) (
 	// 调用service层处理业务逻辑
 	user, err := s.userService.GetUser(req)
 	if err != nil {
-		code := int32(500)
-		if err.Error() == "用户不存在" {
-			code = 404
-		}
+		code, msg := errs.ParseCommonError(err.Error())
 		return &pb.GetUserResponse{
-			Code:    code,
-			Message: err.Error(),
+			Code:    int32(code),
+			Message: msg,
 		}, nil
 	}
 
@@ -64,13 +63,10 @@ func (s *UserServiceImpl) UpdateUser(ctx context.Context, req *pb.UpdateUserRequ
 	// 调用service层处理业务逻辑
 	user, err := s.userService.UpdateUser(req)
 	if err != nil {
-		code := int32(500)
-		if err.Error() == "用户不存在" {
-			code = 404
-		}
+		code, msg := errs.ParseCommonError(err.Error())
 		return &pb.UpdateUserResponse{
-			Code:    code,
-			Message: err.Error(),
+			Code:    int32(code),
+			Message: msg,
 		}, nil
 	}
 
@@ -86,13 +82,10 @@ func (s *UserServiceImpl) DeleteUser(ctx context.Context, req *pb.DeleteUserRequ
 	// 调用service层处理业务逻辑
 	err := s.userService.DeleteUser(req)
 	if err != nil {
-		code := int32(500)
-		if err.Error() == "用户不存在" {
-			code = 404
-		}
+		code, msg := errs.ParseCommonError(err.Error())
 		return &pb.DeleteUserResponse{
-			Code:    code,
-			Message: err.Error(),
+			Code:    int32(code),
+			Message: msg,
 		}, nil
 	}
 
@@ -107,9 +100,10 @@ func (s *UserServiceImpl) ListUsers(ctx context.Context, req *pb.ListUsersReques
 	// 调用service层处理业务逻辑
 	users, total, err := s.userService.ListUsers(req)
 	if err != nil {
+		code, msg := errs.ParseCommonError(err.Error())
 		return &pb.ListUsersResponse{
-			Code:    500,
-			Message: err.Error(),
+			Code:    int32(code),
+			Message: msg,
 		}, nil
 	}
 
