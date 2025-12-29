@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package trpc.elysia.backend.user_agent;
+option go_package="github.com/yzf120/elysia-backend/proto/user_agent";
+
+service UserAgentService {
+  rpc AssignAgent (AssignAgentRequest) returns (AssignAgentResponse) {}
+  rpc GetUserAgents (GetUserAgentsRequest) returns (GetUserAgentsResponse) {}
+  rpc RemoveAgent (RemoveAgentRequest) returns (RemoveAgentResponse) {}
+  rpc UpdateAgentConfig (UpdateAgentConfigRequest) returns (UpdateAgentConfigResponse) {}
+}
+
+message AssignAgentRequest {
+  string user_id = 1;
+  string agent_id = 2;
+  string config = 3; // 用户特定的代理配置
+}
+
+message AssignAgentResponse {
+  string user_agent_id = 1;
+  string user_id = 2;
+  string agent_id = 3;
+  string config = 4;
+  string assigned_at = 5;
+}
+
+message GetUserAgentsRequest {
+  string user_id = 1;
+}
+
+message GetUserAgentsResponse {
+  repeated UserAgentInfo user_agents = 1;
+}
+
+message UserAgentInfo {
+  string user_agent_id = 1;
+  string user_id = 2;
+  string agent_id = 3;
+  string agent_name = 4;
+  string agent_description = 5;
+  string config = 6;
+  string assigned_at = 7;
+}
+
+message RemoveAgentRequest {
+  string user_agent_id = 1;
+}
+
+message RemoveAgentResponse {
+  bool success = 1;
+}
+
+message UpdateAgentConfigRequest {
+  string user_agent_id = 1;
+  string config = 2;
+}
+
+message UpdateAgentConfigResponse {
+  string user_agent_id = 1;
+  string config = 2;
+  string updated_at = 3;
+}

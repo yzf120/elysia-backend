@@ -1,0 +1,58 @@
+# 全局配置
+global:
+  namespace: Development
+  env_name: dev
+
+# 服务端配置
+server:
+  app: elysia
+  server: backend
+  service:
+    # HelloWorld tRPC 服务
+    - name: trpc.elysia.backend.helloworld
+      ip: 127.0.0.1
+      port: 8000
+      network: tcp
+      protocol: trpc
+      timeout: 3000
+    
+    # User tRPC 服务
+    - name: trpc.elysia.backend.user
+      ip: 127.0.0.1
+      port: 8001
+      network: tcp
+      protocol: trpc
+      timeout: 3000
+    
+    # HTTP REST API 服务
+    - name: trpc.elysia.backend.http
+      ip: 0.0.0.0
+      port: 8080
+      network: tcp
+      protocol: http
+      timeout: 3000
+
+  # 管理端口配置
+  admin:
+    ip: 127.0.0.1
+    port: 9028
+    read_timeout: 3000
+    write_timeout: 3000
+
+# 插件配置
+plugins:
+  # 日志配置
+  log:
+    default:
+      - writer: console
+        level: debug
+        format: console
+      - writer: file
+        level: info
+        format: json
+        writer_config:
+          filename: ./logs/trpc.log
+          max_size: 100
+          max_backups: 10
+          max_age: 7
+          compress: false

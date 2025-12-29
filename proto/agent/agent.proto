@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package trpc.elysia.backend.agent;
+option go_package="github.com/yzf120/elysia-backend/proto/agent";
+
+service AgentService {
+  rpc CreateAgent (CreateAgentRequest) returns (CreateAgentResponse) {}
+  rpc GetAgent (GetAgentRequest) returns (GetAgentResponse) {}
+  rpc UpdateAgent (UpdateAgentRequest) returns (UpdateAgentResponse) {}
+  rpc DeleteAgent (DeleteAgentRequest) returns (DeleteAgentResponse) {}
+  rpc ExecuteAgent (ExecuteAgentRequest) returns (ExecuteAgentResponse) {}
+}
+
+message CreateAgentRequest {
+  string name = 1;
+  string description = 2;
+  string agent_type = 3;
+  string config = 4; // JSON配置字符串
+}
+
+message CreateAgentResponse {
+  string agent_id = 1;
+  string name = 2;
+  string description = 3;
+  string agent_type = 4;
+  string config = 5;
+  string created_at = 6;
+}
+
+message GetAgentRequest {
+  string agent_id = 1;
+}
+
+message GetAgentResponse {
+  string agent_id = 1;
+  string name = 2;
+  string description = 3;
+  string agent_type = 4;
+  string config = 5;
+  string created_at = 6;
+  string updated_at = 7;
+}
+
+message UpdateAgentRequest {
+  string agent_id = 1;
+  string name = 2;
+  string description = 3;
+  string config = 4;
+}
+
+message UpdateAgentResponse {
+  string agent_id = 1;
+  string name = 2;
+  string description = 3;
+  string config = 4;
+  string updated_at = 5;
+}
+
+message DeleteAgentRequest {
+  string agent_id = 1;
+}
+
+message DeleteAgentResponse {
+  bool success = 1;
+}
+
+message ExecuteAgentRequest {
+  string agent_id = 1;
+  string input = 2;
+  map<string, string> parameters = 3;
+}
+
+message ExecuteAgentResponse {
+  string agent_id = 1;
+  string output = 2;
+  string execution_id = 3;
+  string executed_at = 4;
+  string status = 5;
+}

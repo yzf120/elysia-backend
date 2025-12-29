@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package trpc.elysia.backend.helloworld;
+option go_package="github.com/yzf120/elysia-backend/proto/helloworld";
+
+service Greeter {
+  rpc Hello (HelloRequest) returns (HelloReply) {}
+}
+
+message HelloRequest {
+  string msg = 1;
+}
+
+message HelloReply {
+  string msg = 1;
+}
