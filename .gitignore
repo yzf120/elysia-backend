@@ -1,0 +1,62 @@
+# 构建输出
+bin/
+elysia-backend
+elysia-backend-prod
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go 构建缓存
+/.vendor/
+/vendor/
+/go.sum
+
+# 依赖管理
+/vendor/
+/Gopkg.lock
+
+# 开发环境文件
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# IDE 配置文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# 测试覆盖率文件
+coverage.txt
+coverage.html
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# 备份文件
+*.bak
+*.backup
+
+# 压缩文件
+*.zip
+*.tar.gz
+*.rar

@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "github.com/yzf120/elysia-backend/proto/auth";
+
+// 认证服务
+service AuthService {
+  // 用户注册
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  
+  // 用户登录
+  rpc Login(LoginRequest) returns (LoginResponse);
+}
+
+// 注册请求
+message RegisterRequest {
+  string user_name = 1;        // 用户名
+  string password = 2;         // 密码
+  string phone_number = 3;     // 手机号
+  string email = 4;            // 邮箱（可选）
+  int32 gender = 5;            // 性别（可选）
+  string chinese_name = 6;     // 中文姓名（可选）
+  string wx_mini_app_open_id = 7; // 微信小程序openID（可选）
+  string image_url = 8;        // 头像URL（可选）
+  string user_type = 9;        // 用户类型（可选）
+}
+
+// 注册响应
+message RegisterResponse {
+  int32 code = 1;              // 响应码
+  string message = 2;          // 响应消息
+  UserInfo user = 3;           // 用户信息
+  string token = 4;            // 登录令牌
+}
+
+// 登录请求
+message LoginRequest {
+  string phone_number = 1;     // 手机号
+  string password = 2;         // 密码
+}
+
+// 登录响应
+message LoginResponse {
+  int32 code = 1;              // 响应码
+  string message = 2;          // 响应消息
+  UserInfo user = 3;           // 用户信息
+  string token = 4;            // 登录令牌
+}
+
+// 用户信息
+message UserInfo {
+  string user_id = 1;          // 用户ID
+  string user_name = 2;        // 用户名
+  string email = 3;            // 邮箱
+  int32 gender = 4;            // 性别
+  string phone_number = 5;     // 手机号
+  string wx_mini_app_open_id = 6; // 微信小程序openID
+  string chinese_name = 7;     // 中文姓名
+  int32 status = 8;            // 状态
+  string create_time = 9;      // 创建时间
+  string image_url = 10;       // 头像URL
+  string register_source = 11; // 注册来源
+  string user_type = 12;       // 用户类型
+}
