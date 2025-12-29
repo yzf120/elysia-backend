@@ -1,16 +1,18 @@
 package dao
 
 import (
-	"database/sql"
 	"fmt"
-	"github.com/yzf120/elysia-backend/config"
 	"log"
+	"time"
 
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/yzf120/elysia-backend/config"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
-// DB 数据库连接实例
-var DB *sql.DB
+// DB GORM 数据库连接实例
+var DB *gorm.DB
 
 // InitDB 初始化数据库连接
 func InitDB() error {
@@ -19,19 +21,29 @@ func InitDB() error {
 
 	// 连接数据库
 	var err error
-	DB, err = sql.Open("mysql", cfg.GetDSN())
+	DB, err = gorm.Open(mysql.Open(cfg.GetDSN()), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+		NowFunc: func() time.Time {
+			return time.Now().Local()
+		},
+	})
 	if err != nil {
 		return fmt.Errorf("数据库连接失败: %v", err)
 	}
 
+	// 获取底层的 sql.DB 以设置连接池参数
+	sqlDB, err := DB.DB()
+	if err != nil {
+		return fmt.Errorf("获取数据库实例失败: %v", err)
+	}
+
 	// 设置连接池参数
-	DB.SetMaxOpenConns(25)
-	DB.SetMaxIdleConns(5)
-	DB.SetConnMaxLifetime(5 * 60) // 5分钟
+	sqlDB.SetMaxOpenConns(25)
+	sqlDB.SetMaxIdleConns(5)
+	sqlDB.SetConnMaxLifetime(5 * time.Minute)
 
 	// 测试连接
-	err = DB.Ping()
-	if err != nil {
+	if err := sqlDB.Ping(); err != nil {
 		return fmt.Errorf("数据库连接测试失败: %v", err)
 	}
 
@@ -43,66 +55,16 @@ func InitDB() error {
 // CloseDB 关闭数据库连接
 func CloseDB() error {
 	if DB != nil {
-		return DB.Close()
+		sqlDB, err := DB.DB()
+		if err != nil {
+			return err
+		}
+		return sqlDB.Close()
 	}
 	return nil
 }
 
-// User 用户模型
-type User struct {
-	ID        int64  `json:"id"`
-	Username  string `json:"username"`
-	Email     string `json:"email"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
-}
-
-// CreateUser 创建用户
-func CreateUser(user *User) error {
-	query := `INSERT INTO users (username, email) VALUES (?, ?)`
-	result, err := DB.Exec(query, user.Username, user.Email)
-	if err != nil {
-		return fmt.Errorf("创建用户失败: %v", err)
-	}
-
-	user.ID, err = result.LastInsertId()
-	if err != nil {
-		return fmt.Errorf("获取用户ID失败: %v", err)
-	}
-
-	return nil
-}
-
-// GetUserByID 根据ID获取用户
-func GetUserByID(id int64) (*User, error) {
-	query := `SELECT id, username, email, created_at, updated_at FROM users WHERE id = ?`
-	row := DB.QueryRow(query, id)
-
-	var user User
-	err := row.Scan(&user.ID, &user.Username, &user.Email, &user.CreatedAt, &user.UpdatedAt)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("查询用户失败: %v", err)
-	}
-
-	return &user, nil
-}
-
-// GetUserByUsername 根据用户名获取用户
-func GetUserByUsername(username string) (*User, error) {
-	query := `SELECT id, username, email, created_at, updated_at FROM users WHERE username = ?`
-	row := DB.QueryRow(query, username)
-
-	var user User
-	err := row.Scan(&user.ID, &user.Username, &user.Email, &user.CreatedAt, &user.UpdatedAt)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("查询用户失败: %v", err)
-	}
-
-	return &user, nil
+// GetDB 获取数据库连接实例
+func GetDB() *gorm.DB {
+	return DB
 }

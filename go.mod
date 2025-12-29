@@ -8,6 +8,8 @@ require (
 	github.com/joho/godotenv v1.5.1
 	golang.org/x/crypto v0.14.0
 	google.golang.org/protobuf v1.33.0
+	gorm.io/driver/mysql v1.5.2
+	gorm.io/gorm v1.25.5
 	trpc.group/trpc-go/trpc-go v1.0.3
 )
 
@@ -20,6 +22,8 @@ require (
 	github.com/google/flatbuffers v2.0.0+incompatible // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.15.9 // indirect
 	github.com/lestrrat-go/strftime v1.0.6 // indirect
