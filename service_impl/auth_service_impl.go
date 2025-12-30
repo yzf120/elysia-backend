@@ -2,6 +2,7 @@ package service_impl
 
 import (
 	"context"
+	"github.com/yzf120/elysia-backend/consts"
 	"github.com/yzf120/elysia-backend/errs"
 	"github.com/yzf120/elysia-backend/model/auth"
 	pb "github.com/yzf120/elysia-backend/proto/auth"
@@ -31,8 +32,8 @@ func (s *AuthServiceImpl) VerifyCode(ctx context.Context, req *auth.VerifyCodeRe
 	}
 
 	return &auth.VerifyCodeResponse{
-		Code:    0,
-		Message: "验证码验证成功",
+		Code:    consts.SuccessCode,
+		Message: consts.MessageVerifyCodeSuccess,
 	}, nil
 }
 
@@ -49,8 +50,8 @@ func (s *AuthServiceImpl) Register(ctx context.Context, req *pb.RegisterRequest)
 	}
 
 	return &pb.RegisterResponse{
-		Code:    0,
-		Message: "注册成功",
+		Code:    consts.SuccessCode,
+		Message: consts.MessageRegisterSuccess,
 		User:    userInfo,
 		Token:   token,
 	}, nil
@@ -69,8 +70,8 @@ func (s *AuthServiceImpl) Login(ctx context.Context, req *pb.LoginRequest) (*pb.
 	}
 
 	return &pb.LoginResponse{
-		Code:    0,
-		Message: "登录成功",
+		Code:    consts.SuccessCode,
+		Message: consts.MessageLoginSuccess,
 		User:    userInfo,
 		Token:   token,
 	}, nil
@@ -88,8 +89,8 @@ func (s *AuthServiceImpl) SendVerificationCode(ctx context.Context, req *auth.Se
 	}
 
 	return &auth.SendCodeResponse{
-		Code:    0,
-		Message: "验证码发送成功",
+		Code:    consts.SuccessCode,
+		Message: consts.MessageSendCodeSuccess,
 	}, nil
 }
 
@@ -105,8 +106,8 @@ func (s *AuthServiceImpl) RegisterWithSMS(ctx context.Context, req *auth.Registe
 	}
 
 	return &auth.RegisterWithSMSResponse{
-		Code:     0,
-		Message:  "注册成功",
+		Code:     consts.SuccessCode,
+		Message:  consts.MessageRegisterSuccess,
 		UserInfo: userInfo,
 		Token:    token,
 	}, nil
@@ -115,7 +116,7 @@ func (s *AuthServiceImpl) RegisterWithSMS(ctx context.Context, req *auth.Registe
 // LoginWithSMS 手机号+验证码登录
 func (s *AuthServiceImpl) LoginWithSMS(ctx context.Context, req *auth.LoginWithSMSRequest) (*auth.LoginWithSMSResponse, error) {
 	// 调用service层处理业务逻辑
-	userInfo, token, err := s.authService.LoginWithSMS(req.PhoneNumber, req.Code)
+	userInfo, token, err := s.authService.LoginWithSMS(ctx, req.PhoneNumber, req.Code)
 	if err != nil {
 		code, msg := errs.ParseCommonError(err.Error())
 		return &auth.LoginWithSMSResponse{
@@ -125,8 +126,8 @@ func (s *AuthServiceImpl) LoginWithSMS(ctx context.Context, req *auth.LoginWithS
 	}
 
 	return &auth.LoginWithSMSResponse{
-		Code:     0,
-		Message:  "登录成功",
+		Code:     consts.SuccessCode,
+		Message:  consts.MessageLoginSuccess,
 		UserInfo: userInfo,
 		Token:    token,
 	}, nil
@@ -145,8 +146,8 @@ func (s *AuthServiceImpl) LoginWithPassword(ctx context.Context, req *auth.Login
 	}
 
 	return &auth.LoginWithPasswordResponse{
-		Code:     0,
-		Message:  "登录成功",
+		Code:     consts.SuccessCode,
+		Message:  consts.MessageLoginSuccess,
 		UserInfo: userInfo,
 		Token:    token,
 	}, nil

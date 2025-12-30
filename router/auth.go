@@ -2,17 +2,35 @@ package router
 
 import (
 	"encoding/json"
+	"github.com/gorilla/mux"
 	"github.com/yzf120/elysia-backend/errs"
-	"net/http"
-
-	pb "github.com/yzf120/elysia-backend/proto/user"
+	"github.com/yzf120/elysia-backend/model/auth"
 	"github.com/yzf120/elysia-backend/service_impl"
+	"net/http"
 )
 
-var userService = service_impl.NewUserServiceImpl()
+var authServiceImpl = service_impl.NewAuthServiceImpl()
 
-// createUserHandler 创建用户处理器
-func createUserHandler(w http.ResponseWriter, r *http.Request) {
+// registerAuth 注册认证相关路由
+func registerAuth(router *mux.Router) {
+	// 发送验证码 - POST
+	router.HandleFunc("/api/auth/send-code", sendCodeHandler).Methods("POST")
+
+	// 校验验证码
+	router.HandleFunc("/api/auth/verify-code", verifyCodeHandler).Methods("POST")
+
+	// 手机号+验证码注册 - POST
+	router.HandleFunc("/api/auth/register-sms", registerWithSMSHandler).Methods("POST")
+
+	// 手机号+验证码登录 - POST
+	router.HandleFunc("/api/auth/login-sms", loginWithSMSHandler).Methods("POST")
+
+	// 手机号+密码登录 - POST
+	router.HandleFunc("/api/auth/login-password", loginWithPasswordHandler).Methods("POST")
+}
+
+// sendCodeHandler 发送验证码处理器
+func sendCodeHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	// 设置响应头
 	w.Header().Set("Content-Type", "application/json")
@@ -20,9 +38,8 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	// 解析请求体
-	req := &pb.CreateUserRequest{}
+	req := &auth.SendCodeRequest{}
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
-		// 构建错误响应
 		errResp := &errs.BaseResponse{
 			Data:  nil,
 			Error: errs.NewError(http.StatusBadRequest, err.Error()),
@@ -34,9 +51,8 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 调用服务
-	resp, err := userService.CreateUser(ctx, req)
+	resp, err := authServiceImpl.SendVerificationCode(ctx, req)
 	if err != nil {
-		// 构建错误响应
 		errResp := &errs.BaseResponse{
 			Data:  nil,
 			Error: errs.NewError(int(resp.Code), resp.Message),
@@ -46,66 +62,22 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(respBytes)
 		return
 	}
-
-	// 序列化并返回响应
 	respBytes, _ := json.Marshal(resp)
 	w.WriteHeader(http.StatusOK)
 	w.Write(respBytes)
 }
 
-// getUserHandler 获取用户信息处理器 (GET - 只支持通过单个ID查询)
-func getUserHandler(w http.ResponseWriter, r *http.Request) {
+// verifyCodeHandler 校验验证码处理器
+func verifyCodeHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-
-	// 设置响应头
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
-	// 从查询参数获取ID (只支持一种查询方式)
-	userId := r.URL.Query().Get("user_id")
-	phoneNumber := r.URL.Query().Get("phone_number")
-	wxOpenId := r.URL.Query().Get("wx_mini_app_open_id")
-
-	req := &pb.GetUserRequest{
-		UserId:          userId,
-		PhoneNumber:     phoneNumber,
-		WxMiniAppOpenId: wxOpenId,
-	}
-
-	// 调用服务
-	resp, err := userService.GetUser(ctx, req)
-	if err != nil {
-		// 构建错误响应
-		errResp := &errs.BaseResponse{
-			Data:  nil,
-			Error: errs.NewError(int(resp.Code), resp.Message),
-		}
-		respBytes, _ := json.Marshal(errResp)
-		w.WriteHeader(int(resp.Code))
-		w.Write(respBytes)
-		return
-	}
-
-	// 序列化并返回响应
-	respBytes, _ := json.Marshal(resp)
-	w.WriteHeader(http.StatusOK)
-	w.Write(respBytes)
-}
-
-// updateUserHandler 更新用户信息处理器 (POST)
-func updateUserHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
 	// 设置响应头
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	// 解析请求体
-	req := &pb.UpdateUserRequest{}
+	req := &auth.VerifyCodeRequest{}
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
-		// 构建错误响应
 		errResp := &errs.BaseResponse{
 			Data:  nil,
 			Error: errs.NewError(http.StatusBadRequest, err.Error()),
@@ -117,9 +89,8 @@ func updateUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 调用服务
-	resp, err := userService.UpdateUser(ctx, req)
+	resp, err := authServiceImpl.VerifyCode(ctx, req)
 	if err != nil {
-		// 构建错误响应
 		errResp := &errs.BaseResponse{
 			Data:  nil,
 			Error: errs.NewError(int(resp.Code), resp.Message),
@@ -129,26 +100,23 @@ func updateUserHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(respBytes)
 		return
 	}
-
-	// 序列化并返回响应
 	respBytes, _ := json.Marshal(resp)
 	w.WriteHeader(http.StatusOK)
 	w.Write(respBytes)
+	return
 }
 
-// deleteUserHandler 删除用户处理器 (POST)
-func deleteUserHandler(w http.ResponseWriter, r *http.Request) {
+// registerWithSMSHandler 手机号+验证码注册处理器
+func registerWithSMSHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-
 	// 设置响应头
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	// 解析请求体
-	req := &pb.DeleteUserRequest{}
+	req := &auth.RegisterWithSMSRequest{}
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
-		// 构建错误响应
 		errResp := &errs.BaseResponse{
 			Data:  nil,
 			Error: errs.NewError(http.StatusBadRequest, err.Error()),
@@ -160,9 +128,46 @@ func deleteUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 调用服务
-	resp, err := userService.DeleteUser(ctx, req)
+	resp, err := authServiceImpl.RegisterWithSMS(ctx, req)
 	if err != nil {
-		// 构建错误响应
+		errResp := &errs.BaseResponse{
+			Data:  nil,
+			Error: errs.NewError(int(resp.Code), resp.Message),
+		}
+		respBytes, _ := json.Marshal(errResp)
+		w.WriteHeader(int(resp.Code))
+		w.Write(respBytes)
+		return
+	}
+	respBytes, _ := json.Marshal(resp)
+	w.WriteHeader(http.StatusOK)
+	w.Write(respBytes)
+}
+
+// loginWithSMSHandler 手机号+验证码登录处理器
+func loginWithSMSHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	// 设置响应头
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	// 解析请求体
+	req := &auth.LoginWithSMSRequest{}
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		errResp := &errs.BaseResponse{
+			Data:  nil,
+			Error: errs.NewError(http.StatusBadRequest, "请求参数错误: "+err.Error()),
+		}
+		respBytes, _ := json.Marshal(errResp)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(respBytes)
+		return
+	}
+
+	// 调用服务
+	resp, err := authServiceImpl.LoginWithSMS(ctx, req)
+	if err != nil {
 		errResp := &errs.BaseResponse{
 			Data:  nil,
 			Error: errs.NewError(int(resp.Code), resp.Message),
@@ -173,25 +178,23 @@ func deleteUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 序列化并返回响应
+	// 成功响应
 	respBytes, _ := json.Marshal(resp)
 	w.WriteHeader(http.StatusOK)
 	w.Write(respBytes)
 }
 
-// listUsersHandler 查询用户列表处理器 (POST - 复杂查询条件)
-func listUsersHandler(w http.ResponseWriter, r *http.Request) {
+// loginWithPasswordHandler 手机号+密码登录处理器
+func loginWithPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-
 	// 设置响应头
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	// 解析请求体
-	req := &pb.ListUsersRequest{}
+	req := &auth.LoginWithPasswordRequest{}
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
-		// 构建错误响应
 		errResp := &errs.BaseResponse{
 			Data:  nil,
 			Error: errs.NewError(http.StatusBadRequest, err.Error()),
@@ -203,9 +206,8 @@ func listUsersHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 调用服务
-	resp, err := userService.ListUsers(ctx, req)
+	resp, err := authServiceImpl.LoginWithPassword(ctx, req)
 	if err != nil {
-		// 构建错误响应
 		errResp := &errs.BaseResponse{
 			Data:  nil,
 			Error: errs.NewError(int(resp.Code), resp.Message),
@@ -216,7 +218,7 @@ func listUsersHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 序列化并返回响应
+	// 成功响应
 	respBytes, _ := json.Marshal(resp)
 	w.WriteHeader(http.StatusOK)
 	w.Write(respBytes)
