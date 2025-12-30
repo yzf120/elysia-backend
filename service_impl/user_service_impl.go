@@ -2,6 +2,7 @@ package service_impl
 
 import (
 	"context"
+	"github.com/yzf120/elysia-backend/consts"
 	"github.com/yzf120/elysia-backend/errs"
 
 	pb "github.com/yzf120/elysia-backend/proto/user"
@@ -33,8 +34,8 @@ func (s *UserServiceImpl) CreateUser(ctx context.Context, req *pb.CreateUserRequ
 	}
 
 	return &pb.CreateUserResponse{
-		Code:    0,
-		Message: "创建用户成功",
+		Code:    consts.SuccessCode,
+		Message: consts.MessageCreateUserSuccess,
 		User:    user,
 	}, nil
 }
@@ -52,8 +53,8 @@ func (s *UserServiceImpl) GetUser(ctx context.Context, req *pb.GetUserRequest) (
 	}
 
 	return &pb.GetUserResponse{
-		Code:    0,
-		Message: "查询成功",
+		Code:    consts.SuccessCode,
+		Message: consts.MessageQuerySuccess,
 		User:    user,
 	}, nil
 }
@@ -71,8 +72,8 @@ func (s *UserServiceImpl) UpdateUser(ctx context.Context, req *pb.UpdateUserRequ
 	}
 
 	return &pb.UpdateUserResponse{
-		Code:    0,
-		Message: "更新成功",
+		Code:    consts.SuccessCode,
+		Message: consts.MessageUpdateSuccess,
 		User:    user,
 	}, nil
 }
@@ -90,8 +91,8 @@ func (s *UserServiceImpl) DeleteUser(ctx context.Context, req *pb.DeleteUserRequ
 	}
 
 	return &pb.DeleteUserResponse{
-		Code:    0,
-		Message: "删除成功",
+		Code:    consts.SuccessCode,
+		Message: consts.MessageDeleteSuccess,
 	}, nil
 }
 
@@ -108,8 +109,8 @@ func (s *UserServiceImpl) ListUsers(ctx context.Context, req *pb.ListUsersReques
 	}
 
 	return &pb.ListUsersResponse{
-		Code:     0,
-		Message:  "查询成功",
+		Code:     consts.SuccessCode,
+		Message:  consts.MessageQuerySuccess,
 		Users:    users,
 		Total:    total,
 		Page:     req.Page,

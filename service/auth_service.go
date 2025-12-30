@@ -2,8 +2,6 @@ package service
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"time"
@@ -23,6 +21,7 @@ type AuthService struct {
 	userService             *UserService
 	verificationCodeService *utils.VerificationCodeService
 	smsClient               *utils.TencentSMSClient
+	jwtService              *utils.JWTService
 }
 
 // NewAuthService 创建认证服务
@@ -32,6 +31,7 @@ func NewAuthService() *AuthService {
 		userService:             NewUserService(),
 		verificationCodeService: utils.NewVerificationCodeService(),
 		smsClient:               utils.NewTencentSMSClient(),
+		jwtService:              utils.NewJWTService(),
 	}
 }
 
@@ -159,15 +159,8 @@ func (s *AuthService) validateLoginRequest(req *authPb.LoginRequest) error {
 
 // generateToken 生成登录令牌（简单实现，实际应使用JWT）
 func (s *AuthService) generateToken(userID string) (string, error) {
-	// 生成32字节随机数
-	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
-	}
-	// 转换为十六进制字符串
-	token := hex.EncodeToString(b)
-	// 实际应该将token存储到Redis等缓存中，并设置过期时间
-	return token, nil
+	// 使用 JWTService 生成 token，token 会自动存储到 Redis
+	return s.jwtService.GenerateToken(userID)
 }
 
 // convertUserToAuthUserInfo 将用户proto转换为认证用户信息
@@ -309,7 +302,7 @@ func (s *AuthService) RegisterWithSMS(ctx context.Context, phoneNumber, code str
 }
 
 // LoginWithSMS 手机号+验证码登录
-func (s *AuthService) LoginWithSMS(phoneNumber, code string) (*authPb.UserInfo, string, error) {
+func (s *AuthService) LoginWithSMS(ctx context.Context, phoneNumber, code string) (*authPb.UserInfo, string, error) {
 	// 验证验证码
 	if err := s.verificationCodeService.VerifyCode(phoneNumber, code, "login"); err != nil {
 		return nil, "", errs.NewCommonError(errs.ErrBadRequest, "验证码验证失败: "+err.Error())
