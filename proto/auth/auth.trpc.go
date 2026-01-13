@@ -23,6 +23,8 @@ type AuthServiceService interface {
 	Register(ctx context.Context, req *RegisterRequest) (*RegisterResponse, error)
 	// Login 用户登录
 	Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error)
+	// LoginAdminUser 管理员用户登录
+	LoginAdminUser(ctx context.Context, req *LoginAdminUserRequest) (*LoginAdminUserResponse, error)
 }
 
 func AuthServiceService_Register_Handler(svr interface{}, ctx context.Context, f server.FilterFunc) (interface{}, error) {
@@ -61,18 +63,40 @@ func AuthServiceService_Login_Handler(svr interface{}, ctx context.Context, f se
 	return rsp, nil
 }
 
+func AuthServiceService_LoginAdminUser_Handler(svr interface{}, ctx context.Context, f server.FilterFunc) (interface{}, error) {
+	req := &LoginAdminUserRequest{}
+	filters, err := f(req)
+	if err != nil {
+		return nil, err
+	}
+	handleFunc := func(ctx context.Context, reqbody interface{}) (interface{}, error) {
+		return svr.(AuthServiceService).LoginAdminUser(ctx, reqbody.(*LoginAdminUserRequest))
+	}
+
+	var rsp interface{}
+	rsp, err = filters.Filter(ctx, req, handleFunc)
+	if err != nil {
+		return nil, err
+	}
+	return rsp, nil
+}
+
 // AuthServiceServer_ServiceDesc descriptor for server.RegisterService.
 var AuthServiceServer_ServiceDesc = server.ServiceDesc{
-	ServiceName: "auth.AuthService",
+	ServiceName: "trpc.elysia.backend.auth.AuthService",
 	HandlerType: ((*AuthServiceService)(nil)),
 	Methods: []server.Method{
 		{
-			Name: "/auth.AuthService/Register",
+			Name: "/trpc.elysia.backend.auth.AuthService/Register",
 			Func: AuthServiceService_Register_Handler,
 		},
 		{
-			Name: "/auth.AuthService/Login",
+			Name: "/trpc.elysia.backend.auth.AuthService/Login",
 			Func: AuthServiceService_Login_Handler,
+		},
+		{
+			Name: "/trpc.elysia.backend.auth.AuthService/LoginAdminUser",
+			Func: AuthServiceService_LoginAdminUser_Handler,
 		},
 	},
 }
@@ -98,6 +122,11 @@ func (s *UnimplementedAuthService) Login(ctx context.Context, req *LoginRequest)
 	return nil, errors.New("rpc Login of service AuthService is not implemented")
 }
 
+// LoginAdminUser 管理员用户登录
+func (s *UnimplementedAuthService) LoginAdminUser(ctx context.Context, req *LoginAdminUserRequest) (*LoginAdminUserResponse, error) {
+	return nil, errors.New("rpc LoginAdminUser of service AuthService is not implemented")
+}
+
 // END --------------------------------- Default Unimplemented Server Service --------------------------------- END
 
 // END ======================================= Server Service Definition ======================================= END
@@ -110,6 +139,8 @@ type AuthServiceClientProxy interface {
 	Register(ctx context.Context, req *RegisterRequest, opts ...client.Option) (rsp *RegisterResponse, err error)
 	// Login 用户登录
 	Login(ctx context.Context, req *LoginRequest, opts ...client.Option) (rsp *LoginResponse, err error)
+	// LoginAdminUser 管理员用户登录
+	LoginAdminUser(ctx context.Context, req *LoginAdminUserRequest, opts ...client.Option) (rsp *LoginAdminUserResponse, err error)
 }
 
 type AuthServiceClientProxyImpl struct {
@@ -124,7 +155,7 @@ var NewAuthServiceClientProxy = func(opts ...client.Option) AuthServiceClientPro
 func (c *AuthServiceClientProxyImpl) Register(ctx context.Context, req *RegisterRequest, opts ...client.Option) (*RegisterResponse, error) {
 	ctx, msg := codec.WithCloneMessage(ctx)
 	defer codec.PutBackMessage(msg)
-	msg.WithClientRPCName("/auth.AuthService/Register")
+	msg.WithClientRPCName("/trpc.elysia.backend.auth.AuthService/Register")
 	msg.WithCalleeServiceName(AuthServiceServer_ServiceDesc.ServiceName)
 	msg.WithCalleeApp("")
 	msg.WithCalleeServer("")
@@ -144,7 +175,7 @@ func (c *AuthServiceClientProxyImpl) Register(ctx context.Context, req *Register
 func (c *AuthServiceClientProxyImpl) Login(ctx context.Context, req *LoginRequest, opts ...client.Option) (*LoginResponse, error) {
 	ctx, msg := codec.WithCloneMessage(ctx)
 	defer codec.PutBackMessage(msg)
-	msg.WithClientRPCName("/auth.AuthService/Login")
+	msg.WithClientRPCName("/trpc.elysia.backend.auth.AuthService/Login")
 	msg.WithCalleeServiceName(AuthServiceServer_ServiceDesc.ServiceName)
 	msg.WithCalleeApp("")
 	msg.WithCalleeServer("")
@@ -155,6 +186,26 @@ func (c *AuthServiceClientProxyImpl) Login(ctx context.Context, req *LoginReques
 	callopts = append(callopts, c.opts...)
 	callopts = append(callopts, opts...)
 	rsp := &LoginResponse{}
+	if err := c.client.Invoke(ctx, req, rsp, callopts...); err != nil {
+		return nil, err
+	}
+	return rsp, nil
+}
+
+func (c *AuthServiceClientProxyImpl) LoginAdminUser(ctx context.Context, req *LoginAdminUserRequest, opts ...client.Option) (*LoginAdminUserResponse, error) {
+	ctx, msg := codec.WithCloneMessage(ctx)
+	defer codec.PutBackMessage(msg)
+	msg.WithClientRPCName("/trpc.elysia.backend.auth.AuthService/LoginAdminUser")
+	msg.WithCalleeServiceName(AuthServiceServer_ServiceDesc.ServiceName)
+	msg.WithCalleeApp("")
+	msg.WithCalleeServer("")
+	msg.WithCalleeService("AuthService")
+	msg.WithCalleeMethod("LoginAdminUser")
+	msg.WithSerializationType(codec.SerializationTypePB)
+	callopts := make([]client.Option, 0, len(c.opts)+len(opts))
+	callopts = append(callopts, c.opts...)
+	callopts = append(callopts, opts...)
+	rsp := &LoginAdminUserResponse{}
 	if err := c.client.Invoke(ctx, req, rsp, callopts...); err != nil {
 		return nil, err
 	}

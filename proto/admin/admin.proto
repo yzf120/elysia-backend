@@ -1,0 +1,129 @@
+syntax = "proto3";
+
+package trpc.elysia.backend.admin;
+
+option go_package = "github.com/yzf120/elysia-backend/proto/admin";
+
+// 管理员用户服务
+service AdminUserService {
+  // 创建管理员用户
+  rpc CreateAdminUser(CreateAdminUserRequest) returns (CreateAdminUserResponse);
+  
+  // 管理员用户登录
+  rpc LoginAdminUser(LoginAdminUserRequest) returns (LoginAdminUserResponse);
+  
+  // 更新管理员用户密码
+  rpc UpdateAdminUserPassword(UpdateAdminUserPasswordRequest) returns (UpdateAdminUserPasswordResponse);
+  
+  // 查询管理员用户信息
+  rpc GetAdminUser(GetAdminUserRequest) returns (GetAdminUserResponse);
+  
+  // 查询管理员用户列表
+  rpc ListAdminUsers(ListAdminUsersRequest) returns (ListAdminUsersResponse);
+  
+  // 更新管理员用户状态
+  rpc UpdateAdminUserStatus(UpdateAdminUserStatusRequest) returns (UpdateAdminUserStatusResponse);
+}
+
+// 创建管理员用户请求
+message CreateAdminUserRequest {
+  string username = 1;        // 用户名（登录账号）
+  string password = 2;        // 密码
+  string real_name = 3;       // 真实姓名
+  string email = 4;           // 邮箱
+  string role = 5;            // 角色：admin, super_admin
+  string remark = 6;          // 备注
+}
+
+// 创建管理员用户响应
+message CreateAdminUserResponse {
+  int32 code = 1;             // 响应码
+  string message = 2;         // 响应消息
+  AdminUserInfo admin_user = 3; // 管理员用户信息
+}
+
+// 管理员用户登录请求
+message LoginAdminUserRequest {
+  string username = 1;        // 用户名
+  string password = 2;       // 密码
+  string ip_address = 3;      // 登录IP地址
+}
+
+// 管理员用户登录响应
+message LoginAdminUserResponse {
+  int32 code = 1;             // 响应码
+  string message = 2;         // 响应消息
+  AdminUserInfo admin_user = 3; // 管理员用户信息
+  string token = 4;           // 登录令牌
+}
+
+// 更新管理员用户密码请求
+message UpdateAdminUserPasswordRequest {
+  string admin_id = 1;        // 管理员ID
+  string old_password = 2;     // 旧密码
+  string new_password = 3;     // 新密码
+}
+
+// 更新管理员用户密码响应
+message UpdateAdminUserPasswordResponse {
+  int32 code = 1;             // 响应码
+  string message = 2;         // 响应消息
+}
+
+// 查询管理员用户请求
+message GetAdminUserRequest {
+  string admin_id = 1;        // 管理员ID
+}
+
+// 查询管理员用户响应
+message GetAdminUserResponse {
+  int32 code = 1;             // 响应码
+  string message = 2;         // 响应消息
+  AdminUserInfo admin_user = 3; // 管理员用户信息
+}
+
+// 查询管理员用户列表请求
+message ListAdminUsersRequest {
+  int32 page = 1;             // 页码（从1开始）
+  int32 page_size = 2;       // 每页大小
+  string role = 3;           // 角色过滤（可选）
+  string status = 4;          // 状态过滤（可选）
+}
+
+// 查询管理员用户列表响应
+message ListAdminUsersResponse {
+  int32 code = 1;             // 响应码
+  string message = 2;         // 响应消息
+  repeated AdminUserInfo admin_users = 3; // 管理员用户列表
+  int32 total = 4;            // 总数
+}
+
+// 更新管理员用户状态请求
+message UpdateAdminUserStatusRequest {
+  string admin_id = 1;        // 管理员ID
+  int32 status = 2;           // 状态：0-禁用，1-启用
+}
+
+// 更新管理员用户状态响应
+message UpdateAdminUserStatusResponse {
+  int32 code = 1;             // 响应码
+  string message = 2;         // 响应消息
+}
+
+// 管理员用户信息
+message AdminUserInfo {
+  int64 id = 1;               // 自增ID
+  string admin_id = 2;         // 管理员ID
+  string username = 3;         // 用户名
+  string real_name = 4;        // 真实姓名
+  string email = 5;            // 邮箱
+  string role = 6;             // 角色
+  int32 status = 7;            // 状态
+  string last_login_time = 8;  // 最后登录时间
+  string last_login_ip = 9;    // 最后登录IP
+  int32 login_fail_count = 10; // 登录失败次数
+  string password_update_time = 11; // 密码最后更新时间
+  string create_time = 12;     // 创建时间
+  string update_time = 13;      // 最后更新时间
+  string remark = 14;          // 备注
+}

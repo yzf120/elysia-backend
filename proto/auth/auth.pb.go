@@ -455,11 +455,290 @@ func (x *UserInfo) GetUserType() string {
 	return ""
 }
 
+// 管理员用户登录请求
+type LoginAdminUserRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Username      string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`                    // 用户名（管理员账号）
+	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`                    // 密码
+	IpAddress     string                 `protobuf:"bytes,3,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"` // 登录IP地址
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LoginAdminUserRequest) Reset() {
+	*x = LoginAdminUserRequest{}
+	mi := &file_auth_auth_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LoginAdminUserRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LoginAdminUserRequest) ProtoMessage() {}
+
+func (x *LoginAdminUserRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_auth_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LoginAdminUserRequest.ProtoReflect.Descriptor instead.
+func (*LoginAdminUserRequest) Descriptor() ([]byte, []int) {
+	return file_auth_auth_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *LoginAdminUserRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *LoginAdminUserRequest) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+func (x *LoginAdminUserRequest) GetIpAddress() string {
+	if x != nil {
+		return x.IpAddress
+	}
+	return ""
+}
+
+// 管理员用户登录响应
+type LoginAdminUserResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          int32                  `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`                           // 响应码
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`                      // 响应消息
+	AdminUser     *AdminUserInfo         `protobuf:"bytes,3,opt,name=admin_user,json=adminUser,proto3" json:"admin_user,omitempty"` // 管理员用户信息
+	Token         string                 `protobuf:"bytes,4,opt,name=token,proto3" json:"token,omitempty"`                          // 登录令牌
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LoginAdminUserResponse) Reset() {
+	*x = LoginAdminUserResponse{}
+	mi := &file_auth_auth_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LoginAdminUserResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LoginAdminUserResponse) ProtoMessage() {}
+
+func (x *LoginAdminUserResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_auth_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LoginAdminUserResponse.ProtoReflect.Descriptor instead.
+func (*LoginAdminUserResponse) Descriptor() ([]byte, []int) {
+	return file_auth_auth_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *LoginAdminUserResponse) GetCode() int32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+func (x *LoginAdminUserResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *LoginAdminUserResponse) GetAdminUser() *AdminUserInfo {
+	if x != nil {
+		return x.AdminUser
+	}
+	return nil
+}
+
+func (x *LoginAdminUserResponse) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+// 管理员用户信息
+type AdminUserInfo struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Id                 int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`                                                             // 自增ID
+	AdminId            string                 `protobuf:"bytes,2,opt,name=admin_id,json=adminId,proto3" json:"admin_id,omitempty"`                                     // 管理员ID
+	Username           string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`                                                  // 用户名
+	RealName           string                 `protobuf:"bytes,4,opt,name=real_name,json=realName,proto3" json:"real_name,omitempty"`                                  // 真实姓名
+	Email              string                 `protobuf:"bytes,5,opt,name=email,proto3" json:"email,omitempty"`                                                        // 邮箱
+	Role               string                 `protobuf:"bytes,6,opt,name=role,proto3" json:"role,omitempty"`                                                          // 角色
+	Status             int32                  `protobuf:"varint,7,opt,name=status,proto3" json:"status,omitempty"`                                                     // 状态
+	LastLoginTime      string                 `protobuf:"bytes,8,opt,name=last_login_time,json=lastLoginTime,proto3" json:"last_login_time,omitempty"`                 // 最后登录时间
+	LastLoginIp        string                 `protobuf:"bytes,9,opt,name=last_login_ip,json=lastLoginIp,proto3" json:"last_login_ip,omitempty"`                       // 最后登录IP
+	LoginFailCount     int32                  `protobuf:"varint,10,opt,name=login_fail_count,json=loginFailCount,proto3" json:"login_fail_count,omitempty"`            // 登录失败次数
+	PasswordUpdateTime string                 `protobuf:"bytes,11,opt,name=password_update_time,json=passwordUpdateTime,proto3" json:"password_update_time,omitempty"` // 密码最后更新时间
+	CreateTime         string                 `protobuf:"bytes,12,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`                           // 创建时间
+	UpdateTime         string                 `protobuf:"bytes,13,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`                           // 最后更新时间
+	Remark             string                 `protobuf:"bytes,14,opt,name=remark,proto3" json:"remark,omitempty"`                                                     // 备注
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *AdminUserInfo) Reset() {
+	*x = AdminUserInfo{}
+	mi := &file_auth_auth_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AdminUserInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AdminUserInfo) ProtoMessage() {}
+
+func (x *AdminUserInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_auth_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AdminUserInfo.ProtoReflect.Descriptor instead.
+func (*AdminUserInfo) Descriptor() ([]byte, []int) {
+	return file_auth_auth_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *AdminUserInfo) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *AdminUserInfo) GetAdminId() string {
+	if x != nil {
+		return x.AdminId
+	}
+	return ""
+}
+
+func (x *AdminUserInfo) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *AdminUserInfo) GetRealName() string {
+	if x != nil {
+		return x.RealName
+	}
+	return ""
+}
+
+func (x *AdminUserInfo) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *AdminUserInfo) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *AdminUserInfo) GetStatus() int32 {
+	if x != nil {
+		return x.Status
+	}
+	return 0
+}
+
+func (x *AdminUserInfo) GetLastLoginTime() string {
+	if x != nil {
+		return x.LastLoginTime
+	}
+	return ""
+}
+
+func (x *AdminUserInfo) GetLastLoginIp() string {
+	if x != nil {
+		return x.LastLoginIp
+	}
+	return ""
+}
+
+func (x *AdminUserInfo) GetLoginFailCount() int32 {
+	if x != nil {
+		return x.LoginFailCount
+	}
+	return 0
+}
+
+func (x *AdminUserInfo) GetPasswordUpdateTime() string {
+	if x != nil {
+		return x.PasswordUpdateTime
+	}
+	return ""
+}
+
+func (x *AdminUserInfo) GetCreateTime() string {
+	if x != nil {
+		return x.CreateTime
+	}
+	return ""
+}
+
+func (x *AdminUserInfo) GetUpdateTime() string {
+	if x != nil {
+		return x.UpdateTime
+	}
+	return ""
+}
+
+func (x *AdminUserInfo) GetRemark() string {
+	if x != nil {
+		return x.Remark
+	}
+	return ""
+}
+
 var File_auth_auth_proto protoreflect.FileDescriptor
 
 const file_auth_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x0fauth/auth.proto\x12\x04auth\"\xa6\x02\n" +
+	"\x0fauth/auth.proto\x12\x18trpc.elysia.backend.auth\"\xa6\x02\n" +
 	"\x0fRegisterRequest\x12\x1b\n" +
 	"\tuser_name\x18\x01 \x01(\tR\buserName\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\x12!\n" +
@@ -469,19 +748,19 @@ const file_auth_auth_proto_rawDesc = "" +
 	"\fchinese_name\x18\x06 \x01(\tR\vchineseName\x12,\n" +
 	"\x13wx_mini_app_open_id\x18\a \x01(\tR\x0fwxMiniAppOpenId\x12\x1b\n" +
 	"\timage_url\x18\b \x01(\tR\bimageUrl\x12\x1b\n" +
-	"\tuser_type\x18\t \x01(\tR\buserType\"z\n" +
+	"\tuser_type\x18\t \x01(\tR\buserType\"\x8e\x01\n" +
 	"\x10RegisterResponse\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\x05R\x04code\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\x12\"\n" +
-	"\x04user\x18\x03 \x01(\v2\x0e.auth.UserInfoR\x04user\x12\x14\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x126\n" +
+	"\x04user\x18\x03 \x01(\v2\".trpc.elysia.backend.auth.UserInfoR\x04user\x12\x14\n" +
 	"\x05token\x18\x04 \x01(\tR\x05token\"M\n" +
 	"\fLoginRequest\x12!\n" +
 	"\fphone_number\x18\x01 \x01(\tR\vphoneNumber\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\"w\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\"\x8b\x01\n" +
 	"\rLoginResponse\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\x05R\x04code\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\x12\"\n" +
-	"\x04user\x18\x03 \x01(\v2\x0e.auth.UserInfoR\x04user\x12\x14\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x126\n" +
+	"\x04user\x18\x03 \x01(\v2\".trpc.elysia.backend.auth.UserInfoR\x04user\x12\x14\n" +
 	"\x05token\x18\x04 \x01(\tR\x05token\"\xfe\x02\n" +
 	"\bUserInfo\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
@@ -497,10 +776,40 @@ const file_auth_auth_proto_rawDesc = "" +
 	"\timage_url\x18\n" +
 	" \x01(\tR\bimageUrl\x12'\n" +
 	"\x0fregister_source\x18\v \x01(\tR\x0eregisterSource\x12\x1b\n" +
-	"\tuser_type\x18\f \x01(\tR\buserType2z\n" +
-	"\vAuthService\x129\n" +
-	"\bRegister\x12\x15.auth.RegisterRequest\x1a\x16.auth.RegisterResponse\x120\n" +
-	"\x05Login\x12\x12.auth.LoginRequest\x1a\x13.auth.LoginResponseB-Z+github.com/yzf120/elysia-backend/proto/authb\x06proto3"
+	"\tuser_type\x18\f \x01(\tR\buserType\"n\n" +
+	"\x15LoginAdminUserRequest\x12\x1a\n" +
+	"\busername\x18\x01 \x01(\tR\busername\x12\x1a\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\x12\x1d\n" +
+	"\n" +
+	"ip_address\x18\x03 \x01(\tR\tipAddress\"\xa4\x01\n" +
+	"\x16LoginAdminUserResponse\x12\x12\n" +
+	"\x04code\x18\x01 \x01(\x05R\x04code\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12F\n" +
+	"\n" +
+	"admin_user\x18\x03 \x01(\v2'.trpc.elysia.backend.auth.AdminUserInfoR\tadminUser\x12\x14\n" +
+	"\x05token\x18\x04 \x01(\tR\x05token\"\xb7\x03\n" +
+	"\rAdminUserInfo\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x19\n" +
+	"\badmin_id\x18\x02 \x01(\tR\aadminId\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\x12\x1b\n" +
+	"\treal_name\x18\x04 \x01(\tR\brealName\x12\x14\n" +
+	"\x05email\x18\x05 \x01(\tR\x05email\x12\x12\n" +
+	"\x04role\x18\x06 \x01(\tR\x04role\x12\x16\n" +
+	"\x06status\x18\a \x01(\x05R\x06status\x12&\n" +
+	"\x0flast_login_time\x18\b \x01(\tR\rlastLoginTime\x12\"\n" +
+	"\rlast_login_ip\x18\t \x01(\tR\vlastLoginIp\x12(\n" +
+	"\x10login_fail_count\x18\n" +
+	" \x01(\x05R\x0eloginFailCount\x120\n" +
+	"\x14password_update_time\x18\v \x01(\tR\x12passwordUpdateTime\x12\x1f\n" +
+	"\vcreate_time\x18\f \x01(\tR\n" +
+	"createTime\x12\x1f\n" +
+	"\vupdate_time\x18\r \x01(\tR\n" +
+	"updateTime\x12\x16\n" +
+	"\x06remark\x18\x0e \x01(\tR\x06remark2\xbf\x02\n" +
+	"\vAuthService\x12a\n" +
+	"\bRegister\x12).trpc.elysia.backend.auth.RegisterRequest\x1a*.trpc.elysia.backend.auth.RegisterResponse\x12X\n" +
+	"\x05Login\x12&.trpc.elysia.backend.auth.LoginRequest\x1a'.trpc.elysia.backend.auth.LoginResponse\x12s\n" +
+	"\x0eLoginAdminUser\x12/.trpc.elysia.backend.auth.LoginAdminUserRequest\x1a0.trpc.elysia.backend.auth.LoginAdminUserResponseB-Z+github.com/yzf120/elysia-backend/proto/authb\x06proto3"
 
 var (
 	file_auth_auth_proto_rawDescOnce sync.Once
@@ -514,26 +823,32 @@ func file_auth_auth_proto_rawDescGZIP() []byte {
 	return file_auth_auth_proto_rawDescData
 }
 
-var file_auth_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_auth_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_auth_auth_proto_goTypes = []any{
-	(*RegisterRequest)(nil),  // 0: auth.RegisterRequest
-	(*RegisterResponse)(nil), // 1: auth.RegisterResponse
-	(*LoginRequest)(nil),     // 2: auth.LoginRequest
-	(*LoginResponse)(nil),    // 3: auth.LoginResponse
-	(*UserInfo)(nil),         // 4: auth.UserInfo
+	(*RegisterRequest)(nil),        // 0: trpc.elysia.backend.auth.RegisterRequest
+	(*RegisterResponse)(nil),       // 1: trpc.elysia.backend.auth.RegisterResponse
+	(*LoginRequest)(nil),           // 2: trpc.elysia.backend.auth.LoginRequest
+	(*LoginResponse)(nil),          // 3: trpc.elysia.backend.auth.LoginResponse
+	(*UserInfo)(nil),               // 4: trpc.elysia.backend.auth.UserInfo
+	(*LoginAdminUserRequest)(nil),  // 5: trpc.elysia.backend.auth.LoginAdminUserRequest
+	(*LoginAdminUserResponse)(nil), // 6: trpc.elysia.backend.auth.LoginAdminUserResponse
+	(*AdminUserInfo)(nil),          // 7: trpc.elysia.backend.auth.AdminUserInfo
 }
 var file_auth_auth_proto_depIdxs = []int32{
-	4, // 0: auth.RegisterResponse.user:type_name -> auth.UserInfo
-	4, // 1: auth.LoginResponse.user:type_name -> auth.UserInfo
-	0, // 2: auth.AuthService.Register:input_type -> auth.RegisterRequest
-	2, // 3: auth.AuthService.Login:input_type -> auth.LoginRequest
-	1, // 4: auth.AuthService.Register:output_type -> auth.RegisterResponse
-	3, // 5: auth.AuthService.Login:output_type -> auth.LoginResponse
-	4, // [4:6] is the sub-list for method output_type
-	2, // [2:4] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	4, // 0: trpc.elysia.backend.auth.RegisterResponse.user:type_name -> trpc.elysia.backend.auth.UserInfo
+	4, // 1: trpc.elysia.backend.auth.LoginResponse.user:type_name -> trpc.elysia.backend.auth.UserInfo
+	7, // 2: trpc.elysia.backend.auth.LoginAdminUserResponse.admin_user:type_name -> trpc.elysia.backend.auth.AdminUserInfo
+	0, // 3: trpc.elysia.backend.auth.AuthService.Register:input_type -> trpc.elysia.backend.auth.RegisterRequest
+	2, // 4: trpc.elysia.backend.auth.AuthService.Login:input_type -> trpc.elysia.backend.auth.LoginRequest
+	5, // 5: trpc.elysia.backend.auth.AuthService.LoginAdminUser:input_type -> trpc.elysia.backend.auth.LoginAdminUserRequest
+	1, // 6: trpc.elysia.backend.auth.AuthService.Register:output_type -> trpc.elysia.backend.auth.RegisterResponse
+	3, // 7: trpc.elysia.backend.auth.AuthService.Login:output_type -> trpc.elysia.backend.auth.LoginResponse
+	6, // 8: trpc.elysia.backend.auth.AuthService.LoginAdminUser:output_type -> trpc.elysia.backend.auth.LoginAdminUserResponse
+	6, // [6:9] is the sub-list for method output_type
+	3, // [3:6] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_auth_auth_proto_init() }
@@ -547,7 +862,7 @@ func file_auth_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_auth_auth_proto_rawDesc), len(file_auth_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

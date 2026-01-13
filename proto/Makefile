@@ -58,6 +58,13 @@ generate-all:
 		--nogomod \
 		--mock=false \
 
+	trpc create \
+		-p admin/admin.proto \
+		-o admin \
+		--rpconly \
+		--nogomod \
+		--mock=false \
+
 # 清理生成的代码
 clean:
 	rm -rf */\*.pb.go

@@ -46,6 +46,12 @@ run: deps
 	@echo "启动开发服务器..."
 	go run main.go
 
+# 使用启动脚本运行项目（推荐）
+run-with-services: deps
+	@echo "使用启动脚本运行项目（自动启动数据库服务）..."
+	chmod +x start.sh
+	./start.sh
+
 # 运行测试
 test: deps
 	@echo "运行测试..."

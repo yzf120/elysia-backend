@@ -22,6 +22,19 @@ services:
       timeout: 20s
       retries: 10
 
+  # Redis服务
+  redis:
+    image: redis:7-alpine
+    container_name: elysia-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - elysia-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 10s
+      retries: 5
+
   # 应用服务
   app:
     build: .

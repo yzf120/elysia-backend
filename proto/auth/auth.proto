@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package auth;
+package trpc.elysia.backend.auth;
 
 option go_package = "github.com/yzf120/elysia-backend/proto/auth";
 
@@ -11,6 +11,9 @@ service AuthService {
   
   // 用户登录
   rpc Login(LoginRequest) returns (LoginResponse);
+  
+  // 管理员用户登录
+  rpc LoginAdminUser(LoginAdminUserRequest) returns (LoginAdminUserResponse);
 }
 
 // 注册请求
@@ -62,4 +65,37 @@ message UserInfo {
   string image_url = 10;       // 头像URL
   string register_source = 11; // 注册来源
   string user_type = 12;       // 用户类型
+}
+
+// 管理员用户登录请求
+message LoginAdminUserRequest {
+  string username = 1;        // 用户名（管理员账号）
+  string password = 2;         // 密码
+  string ip_address = 3;       // 登录IP地址
+}
+
+// 管理员用户登录响应
+message LoginAdminUserResponse {
+  int32 code = 1;             // 响应码
+  string message = 2;          // 响应消息
+  AdminUserInfo admin_user = 3; // 管理员用户信息
+  string token = 4;            // 登录令牌
+}
+
+// 管理员用户信息
+message AdminUserInfo {
+  int64 id = 1;               // 自增ID
+  string admin_id = 2;         // 管理员ID
+  string username = 3;         // 用户名
+  string real_name = 4;        // 真实姓名
+  string email = 5;            // 邮箱
+  string role = 6;             // 角色
+  int32 status = 7;            // 状态
+  string last_login_time = 8;  // 最后登录时间
+  string last_login_ip = 9;    // 最后登录IP
+  int32 login_fail_count = 10; // 登录失败次数
+  string password_update_time = 11; // 密码最后更新时间
+  string create_time = 12;     // 创建时间
+  string update_time = 13;     // 最后更新时间
+  string remark = 14;          // 备注
 }

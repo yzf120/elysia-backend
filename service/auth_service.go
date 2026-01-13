@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	adminPb "github.com/yzf120/elysia-backend/proto/admin"
 	"os"
 	"time"
 
@@ -380,4 +381,26 @@ func (s *AuthService) LoginWithPassword(ctx context.Context, phoneNumber, passwo
 	userInfo := s.convertModelToAuthUserInfo(userModel)
 
 	return userInfo, token, nil
+}
+
+// LoginAdminUser 管理员用户登录
+func (s *AuthService) LoginAdminUser(ctx context.Context, username, password, ipAddress string) (*adminPb.AdminUserInfo, string, error) {
+	// 参数校验
+	if username == "" {
+		return nil, "", errs.NewCommonError(errs.ErrBadRequest, "用户名不能为空")
+	}
+	if password == "" {
+		return nil, "", errs.NewCommonError(errs.ErrBadRequest, "密码不能为空")
+	}
+
+	// 创建管理员用户服务实例
+	adminUserService := NewAdminUserService()
+
+	// 调用管理员用户服务进行登录
+	adminUserInfo, token, err := adminUserService.LoginAdminUser(ctx, username, password, ipAddress)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return adminUserInfo, token, nil
 }
