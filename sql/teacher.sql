@@ -1,0 +1,26 @@
+-- 教师表
+CREATE TABLE IF NOT EXISTS `teacher` (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '自增id',
+  `teacher_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '教师id',
+  `user_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '关联用户id',
+  `employee_number` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '工号',
+  `school_email` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '学校邮箱',
+  `teaching_subjects` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT '授课科目（JSON格式）',
+  `teaching_years` int NOT NULL DEFAULT '0' COMMENT '教龄（年）',
+  `department` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '所属院系',
+  `title` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '职称：助教、讲师、副教授、教授',
+  `verification_status` int NOT NULL DEFAULT '0' COMMENT '认证状态：0-待审核，1-已通过，2-已驳回',
+  `verification_time` timestamp NULL DEFAULT NULL COMMENT '认证审核时间',
+  `verifier_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '审核人id',
+  `verification_remark` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '审核备注',
+  `status` int NOT NULL DEFAULT '0' COMMENT '状态：0-未激活，1-正常，2-禁用',
+  `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_teacher_id` (`teacher_id`),
+  UNIQUE KEY `uk_user_id` (`user_id`),
+  UNIQUE KEY `uk_employee_number` (`employee_number`),
+  UNIQUE KEY `uk_school_email` (`school_email`),
+  KEY `idx_verification_status` (`verification_status`) USING BTREE,
+  KEY `idx_department` (`department`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='教师信息表';

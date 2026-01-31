@@ -48,12 +48,8 @@ func registerApiRouters(publicRouter *mux.Router, protectedRouter *mux.Router) {
 	// 以下接口需要认证（注册到受保护路由）
 	// 注册会话相关
 	registerConversation(protectedRouter)
-	// 注册群聊相关
-	registerGroupChat(protectedRouter)
 	// 注册会话相关
 	registerSession(protectedRouter)
-	// 注册用户智能体相关接口
-	registerUserAgent(protectedRouter)
 	// 注册智能体相关
 	registerAgent(protectedRouter)
 	// 注册用户相关接口（除注册外都需要认证）
