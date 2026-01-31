@@ -7,7 +7,7 @@ import (
 
 	"github.com/yzf120/elysia-backend/dao"
 	"github.com/yzf120/elysia-backend/errs"
-	"github.com/yzf120/elysia-backend/model"
+	"github.com/yzf120/elysia-backend/model/admin"
 	adminPb "github.com/yzf120/elysia-backend/proto/admin"
 	"github.com/yzf120/elysia-backend/utils"
 	"golang.org/x/crypto/bcrypt"
@@ -62,7 +62,7 @@ func (s *AdminUserService) CreateAdminUser(req *adminPb.CreateAdminUserRequest) 
 	adminId := utils.GenerateAdminId()
 
 	// 创建管理员用户
-	adminUser := &model.AdminUser{
+	adminUser := &admin.AdminUser{
 		AdminId:    adminId,
 		Username:   req.Username,
 		Password:   string(hashedPassword),
@@ -259,7 +259,7 @@ func (s *AdminUserService) validateCreateAdminUserRequest(req *adminPb.CreateAdm
 }
 
 // convertModelToAdminUserInfo 将数据模型转换为管理员用户信息
-func (s *AdminUserService) convertModelToAdminUserInfo(model *model.AdminUser) *adminPb.AdminUserInfo {
+func (s *AdminUserService) convertModelToAdminUserInfo(model *admin.AdminUser) *adminPb.AdminUserInfo {
 	if model == nil {
 		return nil
 	}

@@ -7,7 +7,7 @@ import (
 
 	"github.com/yzf120/elysia-backend/dao"
 	"github.com/yzf120/elysia-backend/errs"
-	"github.com/yzf120/elysia-backend/model"
+	classModel "github.com/yzf120/elysia-backend/model/class"
 )
 
 // ClassService 班级服务
@@ -29,7 +29,7 @@ func NewClassService() *ClassService {
 }
 
 // CreateClass 创建班级（教师操作）
-func (s *ClassService) CreateClass(teacherId, className, subject, semester, description string, maxStudents int32) (*model.Class, error) {
+func (s *ClassService) CreateClass(teacherId, className, subject, semester, description string, maxStudents int32) (*classModel.Class, error) {
 	// 参数校验
 	if teacherId == "" || className == "" || subject == "" || semester == "" {
 		return nil, errs.NewCommonError(errs.ErrBadRequest, "必填参数不能为空")
@@ -51,7 +51,7 @@ func (s *ClassService) CreateClass(teacherId, className, subject, semester, desc
 	classCode := s.generateClassCode()
 
 	// 构建班级模型
-	class := &model.Class{
+	class := &classModel.Class{
 		ClassId:         classId,
 		ClassName:       className,
 		ClassCode:       classCode,
@@ -114,7 +114,7 @@ func (s *ClassService) JoinClass(studentId, classCode string) error {
 	}
 
 	// 添加班级成员
-	member := &model.ClassMember{
+	member := &classModel.ClassMember{
 		ClassId:   class.ClassId,
 		StudentId: studentId,
 		Status:    1,
@@ -190,7 +190,7 @@ func (s *ClassService) RemoveStudent(teacherId, classId, studentId string) error
 }
 
 // GetClassMembers 获取班级成员列表
-func (s *ClassService) GetClassMembers(classId string, page, pageSize int32) ([]*model.ClassMember, int32, error) {
+func (s *ClassService) GetClassMembers(classId string, page, pageSize int32) ([]*classModel.ClassMember, int32, error) {
 	// 参数校验和默认值设置
 	if page <= 0 {
 		page = 1
@@ -219,7 +219,7 @@ func (s *ClassService) GetClassMembers(classId string, page, pageSize int32) ([]
 }
 
 // GetStudentClasses 获取学生加入的班级列表
-func (s *ClassService) GetStudentClasses(studentId string, page, pageSize int32) ([]*model.ClassMember, int32, error) {
+func (s *ClassService) GetStudentClasses(studentId string, page, pageSize int32) ([]*classModel.ClassMember, int32, error) {
 	// 参数校验和默认值设置
 	if page <= 0 {
 		page = 1
@@ -245,7 +245,7 @@ func (s *ClassService) GetStudentClasses(studentId string, page, pageSize int32)
 }
 
 // GetTeacherClasses 获取教师创建的班级列表
-func (s *ClassService) GetTeacherClasses(teacherId string, page, pageSize int32) ([]*model.Class, int32, error) {
+func (s *ClassService) GetTeacherClasses(teacherId string, page, pageSize int32) ([]*classModel.Class, int32, error) {
 	// 参数校验和默认值设置
 	if page <= 0 {
 		page = 1
@@ -271,7 +271,7 @@ func (s *ClassService) GetTeacherClasses(teacherId string, page, pageSize int32)
 }
 
 // UpdateClass 更新班级信息
-func (s *ClassService) UpdateClass(teacherId, classId string, updates map[string]interface{}) (*model.Class, error) {
+func (s *ClassService) UpdateClass(teacherId, classId string, updates map[string]interface{}) (*classModel.Class, error) {
 	// 查询班级
 	class, err := s.classDAO.GetClassById(classId)
 	if err != nil || class == nil {
@@ -298,7 +298,7 @@ func (s *ClassService) UpdateClass(teacherId, classId string, updates map[string
 }
 
 // GetClassByCode 根据验证码获取班级信息
-func (s *ClassService) GetClassByCode(classCode string) (*model.Class, error) {
+func (s *ClassService) GetClassByCode(classCode string) (*classModel.Class, error) {
 	class, err := s.classDAO.GetClassByCode(classCode)
 	if err != nil {
 		return nil, errs.NewCommonError(errs.ErrInternal, "查询班级失败: "+err.Error())

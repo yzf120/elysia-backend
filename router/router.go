@@ -23,7 +23,10 @@ func RegisterRouter(router *mux.Router) {
 		"/api/auth/login-sms",
 		"/api/auth/login-password",
 		"/api/auth/logout",
-		"/api/user/create", // 用户注册
+		"/api/user/create",      // 用户注册
+		"/api/teacher/register", // 教师注册
+		"/api/teacher/login",    // 教师登录
+		"/api/admin/login",      // 管理员登录
 	}
 
 	// 创建子路由器：公开路由（无需认证）
@@ -54,6 +57,12 @@ func registerApiRouters(publicRouter *mux.Router, protectedRouter *mux.Router) {
 	registerAgent(protectedRouter)
 	// 注册用户相关接口（除注册外都需要认证）
 	registerUserRoutes(publicRouter, protectedRouter)
+	// 注册学生相关接口（需要认证）
+	registerStudent(protectedRouter)
+	// 注册教师相关接口（注册和登录为公开接口，其他需要认证）
+	registerTeacher(publicRouter, protectedRouter)
+	// 注册管理员相关接口（登录为公开接口，其他需要认证）
+	registerAdmin(publicRouter, protectedRouter)
 }
 
 // registerUserRoutes 注册用户相关路由，将注册接口放在公开路由，其他放在受保护路由

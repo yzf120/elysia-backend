@@ -4,29 +4,29 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/yzf120/elysia-backend/model"
+	"github.com/yzf120/elysia-backend/model/admin"
 	"gorm.io/gorm"
 )
 
 // AdminUserDAO 管理员用户数据访问接口
 type AdminUserDAO interface {
 	// CreateAdminUser 创建管理员用户
-	CreateAdminUser(adminUser *model.AdminUser) error
+	CreateAdminUser(adminUser *admin.AdminUser) error
 
 	// GetAdminUserById 根据ID查询管理员用户
-	GetAdminUserById(id int64) (*model.AdminUser, error)
+	GetAdminUserById(id int64) (*admin.AdminUser, error)
 
 	// GetAdminUserByAdminId 根据管理员ID查询
-	GetAdminUserByAdminId(adminId string) (*model.AdminUser, error)
+	GetAdminUserByAdminId(adminId string) (*admin.AdminUser, error)
 
 	// GetAdminUserByUsername 根据用户名查询管理员用户（包含密码）
-	GetAdminUserByUsername(username string) (*model.AdminUser, string, error)
+	GetAdminUserByUsername(username string) (*admin.AdminUser, string, error)
 
 	// GetAdminUserByEmail 根据邮箱查询管理员用户
-	GetAdminUserByEmail(email string) (*model.AdminUser, error)
+	GetAdminUserByEmail(email string) (*admin.AdminUser, error)
 
 	// UpdateAdminUser 更新管理员用户信息
-	UpdateAdminUser(adminUser *model.AdminUser) error
+	UpdateAdminUser(adminUser *admin.AdminUser) error
 
 	// UpdateAdminUserStatus 更新管理员用户状态
 	UpdateAdminUserStatus(adminId string, status int32) error
@@ -38,7 +38,7 @@ type AdminUserDAO interface {
 	UpdateAdminUserLoginInfo(adminId, ipAddress string, loginTime time.Time) error
 
 	// ListAdminUsers 查询管理员用户列表
-	ListAdminUsers(page, pageSize int, role, status string) ([]*model.AdminUser, int64, error)
+	ListAdminUsers(page, pageSize int, role, status string) ([]*admin.AdminUser, int64, error)
 
 	// DeleteAdminUser 删除管理员用户（软删除）
 	DeleteAdminUser(adminId string) error
@@ -57,7 +57,7 @@ func NewAdminUserDAO() AdminUserDAO {
 }
 
 // CreateAdminUser 创建管理员用户
-func (d *adminUserDAOImpl) CreateAdminUser(adminUser *model.AdminUser) error {
+func (d *adminUserDAOImpl) CreateAdminUser(adminUser *admin.AdminUser) error {
 	if adminUser == nil {
 		return fmt.Errorf("admin user cannot be nil")
 	}
@@ -66,8 +66,8 @@ func (d *adminUserDAOImpl) CreateAdminUser(adminUser *model.AdminUser) error {
 }
 
 // GetAdminUserById 根据ID查询管理员用户
-func (d *adminUserDAOImpl) GetAdminUserById(id int64) (*model.AdminUser, error) {
-	var adminUser model.AdminUser
+func (d *adminUserDAOImpl) GetAdminUserById(id int64) (*admin.AdminUser, error) {
+	var adminUser admin.AdminUser
 	err := d.db.Where("id = ?", id).First(&adminUser).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -79,8 +79,8 @@ func (d *adminUserDAOImpl) GetAdminUserById(id int64) (*model.AdminUser, error) 
 }
 
 // GetAdminUserByAdminId 根据管理员ID查询
-func (d *adminUserDAOImpl) GetAdminUserByAdminId(adminId string) (*model.AdminUser, error) {
-	var adminUser model.AdminUser
+func (d *adminUserDAOImpl) GetAdminUserByAdminId(adminId string) (*admin.AdminUser, error) {
+	var adminUser admin.AdminUser
 	err := d.db.Where("admin_id = ?", adminId).First(&adminUser).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -92,8 +92,8 @@ func (d *adminUserDAOImpl) GetAdminUserByAdminId(adminId string) (*model.AdminUs
 }
 
 // GetAdminUserByUsername 根据用户名查询管理员用户（包含密码）
-func (d *adminUserDAOImpl) GetAdminUserByUsername(username string) (*model.AdminUser, string, error) {
-	var adminUser model.AdminUser
+func (d *adminUserDAOImpl) GetAdminUserByUsername(username string) (*admin.AdminUser, string, error) {
+	var adminUser admin.AdminUser
 	err := d.db.Where("username = ?", username).First(&adminUser).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -108,8 +108,8 @@ func (d *adminUserDAOImpl) GetAdminUserByUsername(username string) (*model.Admin
 }
 
 // GetAdminUserByEmail 根据邮箱查询管理员用户
-func (d *adminUserDAOImpl) GetAdminUserByEmail(email string) (*model.AdminUser, error) {
-	var adminUser model.AdminUser
+func (d *adminUserDAOImpl) GetAdminUserByEmail(email string) (*admin.AdminUser, error) {
+	var adminUser admin.AdminUser
 	err := d.db.Where("email = ?", email).First(&adminUser).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -121,7 +121,7 @@ func (d *adminUserDAOImpl) GetAdminUserByEmail(email string) (*model.AdminUser, 
 }
 
 // UpdateAdminUser 更新管理员用户信息
-func (d *adminUserDAOImpl) UpdateAdminUser(adminUser *model.AdminUser) error {
+func (d *adminUserDAOImpl) UpdateAdminUser(adminUser *admin.AdminUser) error {
 	if adminUser == nil {
 		return fmt.Errorf("admin user cannot be nil")
 	}
@@ -131,14 +131,14 @@ func (d *adminUserDAOImpl) UpdateAdminUser(adminUser *model.AdminUser) error {
 
 // UpdateAdminUserStatus 更新管理员用户状态
 func (d *adminUserDAOImpl) UpdateAdminUserStatus(adminId string, status int32) error {
-	return d.db.Model(&model.AdminUser{}).
+	return d.db.Model(&admin.AdminUser{}).
 		Where("admin_id = ?", adminId).
 		Update("status", status).Error
 }
 
 // UpdateAdminUserPassword 更新管理员用户密码
 func (d *adminUserDAOImpl) UpdateAdminUserPassword(adminId string, password string) error {
-	return d.db.Model(&model.AdminUser{}).
+	return d.db.Model(&admin.AdminUser{}).
 		Where("admin_id = ?", adminId).
 		Updates(map[string]interface{}{
 			"password":             password,
@@ -148,7 +148,7 @@ func (d *adminUserDAOImpl) UpdateAdminUserPassword(adminId string, password stri
 
 // UpdateAdminUserLoginInfo 更新管理员用户登录信息
 func (d *adminUserDAOImpl) UpdateAdminUserLoginInfo(adminId, ipAddress string, loginTime time.Time) error {
-	return d.db.Model(&model.AdminUser{}).
+	return d.db.Model(&admin.AdminUser{}).
 		Where("admin_id = ?", adminId).
 		Updates(map[string]interface{}{
 			"last_login_time":  loginTime,
@@ -158,11 +158,11 @@ func (d *adminUserDAOImpl) UpdateAdminUserLoginInfo(adminId, ipAddress string, l
 }
 
 // ListAdminUsers 查询管理员用户列表
-func (d *adminUserDAOImpl) ListAdminUsers(page, pageSize int, role, status string) ([]*model.AdminUser, int64, error) {
-	var adminUsers []*model.AdminUser
+func (d *adminUserDAOImpl) ListAdminUsers(page, pageSize int, role, status string) ([]*admin.AdminUser, int64, error) {
+	var adminUsers []*admin.AdminUser
 	var total int64
 
-	db := d.db.Model(&model.AdminUser{})
+	db := d.db.Model(&admin.AdminUser{})
 
 	// 添加过滤条件
 	if role != "" {

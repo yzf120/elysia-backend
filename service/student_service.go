@@ -7,7 +7,7 @@ import (
 
 	"github.com/yzf120/elysia-backend/dao"
 	"github.com/yzf120/elysia-backend/errs"
-	"github.com/yzf120/elysia-backend/model"
+	"github.com/yzf120/elysia-backend/model/student"
 )
 
 // StudentService 学生服务
@@ -25,7 +25,7 @@ func NewStudentService() *StudentService {
 }
 
 // CreateStudent 创建学生信息（注册时补充信息）
-func (s *StudentService) CreateStudent(userId, major, grade, programmingLevel string, interests, learningTags []string) (*model.Student, error) {
+func (s *StudentService) CreateStudent(userId, major, grade, programmingLevel string, interests, learningTags []string) (*student.Student, error) {
 	// 检查用户是否存在
 	user, err := s.userDAO.GetUserById(userId)
 	if err != nil || user == nil {
@@ -46,7 +46,7 @@ func (s *StudentService) CreateStudent(userId, major, grade, programmingLevel st
 	learningTagsJSON, _ := json.Marshal(learningTags)
 
 	// 构建学生模型
-	student := &model.Student{
+	student := &student.Student{
 		StudentId:        studentId,
 		UserId:           userId,
 		Major:            major,
@@ -66,7 +66,7 @@ func (s *StudentService) CreateStudent(userId, major, grade, programmingLevel st
 }
 
 // GetStudentByUserId 根据用户ID获取学生信息
-func (s *StudentService) GetStudentByUserId(userId string) (*model.Student, error) {
+func (s *StudentService) GetStudentByUserId(userId string) (*student.Student, error) {
 	student, err := s.studentDAO.GetStudentByUserId(userId)
 	if err != nil {
 		return nil, errs.NewCommonError(errs.ErrInternal, "查询学生信息失败: "+err.Error())
@@ -78,7 +78,7 @@ func (s *StudentService) GetStudentByUserId(userId string) (*model.Student, erro
 }
 
 // UpdateStudent 更新学生信息
-func (s *StudentService) UpdateStudent(studentId string, updates map[string]interface{}) (*model.Student, error) {
+func (s *StudentService) UpdateStudent(studentId string, updates map[string]interface{}) (*student.Student, error) {
 	// 检查学生是否存在
 	existingStudent, err := s.studentDAO.GetStudentById(studentId)
 	if err != nil || existingStudent == nil {
@@ -119,7 +119,7 @@ func (s *StudentService) UpdateLearningProgress(studentId string, progress map[s
 }
 
 // ListStudents 查询学生列表
-func (s *StudentService) ListStudents(page, pageSize int32, filters map[string]interface{}) ([]*model.Student, int32, error) {
+func (s *StudentService) ListStudents(page, pageSize int32, filters map[string]interface{}) ([]*student.Student, int32, error) {
 	// 参数校验和默认值设置
 	if page <= 0 {
 		page = 1

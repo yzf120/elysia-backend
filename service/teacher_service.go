@@ -9,6 +9,7 @@ import (
 	"github.com/yzf120/elysia-backend/dao"
 	"github.com/yzf120/elysia-backend/errs"
 	"github.com/yzf120/elysia-backend/model"
+	"github.com/yzf120/elysia-backend/model/teacher"
 	"github.com/yzf120/elysia-backend/utils"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -32,7 +33,7 @@ func NewTeacherService() *TeacherService {
 }
 
 // RegisterTeacher 教师注册（工号+学校邮箱双重验证）
-func (s *TeacherService) RegisterTeacher(ctx context.Context, phoneNumber, password, employeeNumber, schoolEmail, realName, department string, teachingSubjects []string) (*model.Teacher, error) {
+func (s *TeacherService) RegisterTeacher(ctx context.Context, phoneNumber, password, employeeNumber, schoolEmail, realName, department string, teachingSubjects []string) (*teacher.Teacher, error) {
 	// 参数校验
 	if phoneNumber == "" || password == "" || employeeNumber == "" || schoolEmail == "" {
 		return nil, errs.NewCommonError(errs.ErrBadRequest, "必填参数不能为空")
@@ -83,7 +84,7 @@ func (s *TeacherService) RegisterTeacher(ctx context.Context, phoneNumber, passw
 	teacherId := fmt.Sprintf("tea_%d", time.Now().UnixNano())
 	teachingSubjectsJSON, _ := json.Marshal(teachingSubjects)
 
-	teacher := &model.Teacher{
+	teacher := &teacher.Teacher{
 		TeacherId:          teacherId,
 		UserId:             userId,
 		EmployeeNumber:     employeeNumber,
@@ -102,7 +103,7 @@ func (s *TeacherService) RegisterTeacher(ctx context.Context, phoneNumber, passw
 }
 
 // LoginTeacher 教师登录
-func (s *TeacherService) LoginTeacher(ctx context.Context, phoneNumber, password string) (*model.Teacher, *model.User, string, error) {
+func (s *TeacherService) LoginTeacher(ctx context.Context, phoneNumber, password string) (*teacher.Teacher, *model.User, string, error) {
 	// 参数校验
 	if phoneNumber == "" || password == "" {
 		return nil, nil, "", errs.NewCommonError(errs.ErrBadRequest, "手机号和密码不能为空")
@@ -179,7 +180,7 @@ func (s *TeacherService) VerifyTeacher(teacherId, verifierId string, approved bo
 }
 
 // GetTeacherByUserId 根据用户ID获取教师信息
-func (s *TeacherService) GetTeacherByUserId(userId string) (*model.Teacher, error) {
+func (s *TeacherService) GetTeacherByUserId(userId string) (*teacher.Teacher, error) {
 	teacher, err := s.teacherDAO.GetTeacherByUserId(userId)
 	if err != nil {
 		return nil, errs.NewCommonError(errs.ErrInternal, "查询教师信息失败: "+err.Error())
@@ -191,7 +192,7 @@ func (s *TeacherService) GetTeacherByUserId(userId string) (*model.Teacher, erro
 }
 
 // UpdateTeacher 更新教师信息
-func (s *TeacherService) UpdateTeacher(teacherId string, updates map[string]interface{}) (*model.Teacher, error) {
+func (s *TeacherService) UpdateTeacher(teacherId string, updates map[string]interface{}) (*teacher.Teacher, error) {
 	// 检查教师是否存在
 	existingTeacher, err := s.teacherDAO.GetTeacherById(teacherId)
 	if err != nil || existingTeacher == nil {
@@ -213,7 +214,7 @@ func (s *TeacherService) UpdateTeacher(teacherId string, updates map[string]inte
 }
 
 // ListTeachers 查询教师列表
-func (s *TeacherService) ListTeachers(page, pageSize int32, filters map[string]interface{}) ([]*model.Teacher, int32, error) {
+func (s *TeacherService) ListTeachers(page, pageSize int32, filters map[string]interface{}) ([]*teacher.Teacher, int32, error) {
 	// 参数校验和默认值设置
 	if page <= 0 {
 		page = 1
