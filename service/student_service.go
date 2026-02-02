@@ -2,9 +2,6 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
-	"time"
-
 	"github.com/yzf120/elysia-backend/dao"
 	"github.com/yzf120/elysia-backend/errs"
 	"github.com/yzf120/elysia-backend/model/student"
@@ -13,33 +10,25 @@ import (
 // StudentService 学生服务
 type StudentService struct {
 	studentDAO dao.StudentDAO
-	userDAO    dao.UserDAO
 }
 
 // NewStudentService 创建学生服务
 func NewStudentService() *StudentService {
 	return &StudentService{
 		studentDAO: dao.NewStudentDAO(),
-		userDAO:    dao.NewUserDAO(),
 	}
 }
 
 // CreateStudent 创建学生信息（注册时补充信息）
-func (s *StudentService) CreateStudent(userId, major, grade, programmingLevel string, interests, learningTags []string) (*student.Student, error) {
-	// 检查用户是否存在
-	user, err := s.userDAO.GetUserById(userId)
-	if err != nil || user == nil {
-		return nil, errs.NewCommonError(errs.ErrBadRequest, "用户不存在")
+func (s *StudentService) CreateStudent(studentId, major, grade, programmingLevel string, interests, learningTags []string) (*student.Student, error) {
+	// 检查学生是否已存在
+	existingStudent, err := s.studentDAO.GetStudentById(studentId)
+	if err != nil {
+		return nil, errs.NewCommonError(errs.ErrInternal, "查询学生信息失败: "+err.Error())
 	}
-
-	// 检查是否已经创建学生信息
-	existingStudent, _ := s.studentDAO.GetStudentByUserId(userId)
 	if existingStudent != nil {
 		return nil, errs.NewCommonError(errs.ErrBadRequest, "学生信息已存在")
 	}
-
-	// 生成学生ID
-	studentId := fmt.Sprintf("stu_%d", time.Now().UnixNano())
 
 	// 转换interests和learningTags为JSON
 	interestsJSON, _ := json.Marshal(interests)
@@ -48,7 +37,6 @@ func (s *StudentService) CreateStudent(userId, major, grade, programmingLevel st
 	// 构建学生模型
 	student := &student.Student{
 		StudentId:        studentId,
-		UserId:           userId,
 		Major:            major,
 		Grade:            grade,
 		ProgrammingLevel: programmingLevel,
@@ -65,9 +53,9 @@ func (s *StudentService) CreateStudent(userId, major, grade, programmingLevel st
 	return student, nil
 }
 
-// GetStudentByUserId 根据用户ID获取学生信息
-func (s *StudentService) GetStudentByUserId(userId string) (*student.Student, error) {
-	student, err := s.studentDAO.GetStudentByUserId(userId)
+// GetStudentByStudentId 根据学生ID获取学生信息
+func (s *StudentService) GetStudentByStudentId(studentId string) (*student.Student, error) {
+	student, err := s.studentDAO.GetStudentById(studentId)
 	if err != nil {
 		return nil, errs.NewCommonError(errs.ErrInternal, "查询学生信息失败: "+err.Error())
 	}

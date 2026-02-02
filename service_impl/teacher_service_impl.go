@@ -51,58 +51,6 @@ func (s *TeacherServiceImpl) RegisterTeacher(ctx context.Context, req *req.Regis
 	}, nil
 }
 
-// LoginTeacher 教师登录
-func (s *TeacherServiceImpl) LoginTeacher(ctx context.Context, req *req.LoginTeacherRequest) (*rsp.LoginTeacherResponse, error) {
-	// 调用service层处理业务逻辑
-	teacher, user, token, err := s.teacherService.LoginTeacher(ctx, req.PhoneNumber, req.Password)
-	if err != nil {
-		code, msg := errs.ParseCommonError(err.Error())
-		return &rsp.LoginTeacherResponse{
-			Code:    int32(code),
-			Message: msg,
-		}, nil
-	}
-
-	// 解析授课科目JSON
-	var teachingSubjects []string
-	if teacher.TeachingSubjects != "" {
-		json.Unmarshal([]byte(teacher.TeachingSubjects), &teachingSubjects)
-	}
-
-	teacherInfo := &rsp.TeacherInfo{
-		TeacherId:          teacher.TeacherId,
-		UserId:             teacher.UserId,
-		EmployeeNumber:     teacher.EmployeeNumber,
-		SchoolEmail:        teacher.SchoolEmail,
-		TeachingSubjects:   teachingSubjects,
-		TeachingYears:      teacher.TeachingYears,
-		Department:         teacher.Department,
-		Title:              teacher.Title,
-		VerificationStatus: teacher.VerificationStatus,
-		Status:             teacher.Status,
-		CreateTime:         teacher.CreateTime.Format("2006-01-02 15:04:05"),
-		UpdateTime:         teacher.UpdateTime.Format("2006-01-02 15:04:05"),
-	}
-
-	userInfo := &rsp.UserInfo{
-		UserId:      user.UserId,
-		UserName:    user.UserName,
-		Email:       user.Email,
-		PhoneNumber: user.PhoneNumber,
-		ChineseName: user.ChineseName,
-		UserType:    user.UserType,
-		Status:      user.Status,
-	}
-
-	return &rsp.LoginTeacherResponse{
-		Code:    consts.SuccessCode,
-		Message: consts.MessageLoginSuccess,
-		Teacher: teacherInfo,
-		User:    userInfo,
-		Token:   token,
-	}, nil
-}
-
 // VerifyTeacher 审核教师（管理员操作）
 func (s *TeacherServiceImpl) VerifyTeacher(ctx context.Context, req *req.VerifyTeacherRequest) (*rsp.VerifyTeacherResponse, error) {
 	// 调用service层处理业务逻辑
@@ -129,7 +77,7 @@ func (s *TeacherServiceImpl) VerifyTeacher(ctx context.Context, req *req.VerifyT
 // GetTeacher 获取教师信息
 func (s *TeacherServiceImpl) GetTeacher(ctx context.Context, req *req.GetTeacherRequest) (*rsp.GetTeacherResponse, error) {
 	// 调用service层处理业务逻辑
-	teacher, err := s.teacherService.GetTeacherByUserId(req.UserId)
+	teacher, err := s.teacherService.GetTeacherById(req.TeacherId)
 	if err != nil {
 		code, msg := errs.ParseCommonError(err.Error())
 		return &rsp.GetTeacherResponse{
@@ -146,7 +94,6 @@ func (s *TeacherServiceImpl) GetTeacher(ctx context.Context, req *req.GetTeacher
 
 	teacherInfo := &rsp.TeacherInfo{
 		TeacherId:          teacher.TeacherId,
-		UserId:             teacher.UserId,
 		EmployeeNumber:     teacher.EmployeeNumber,
 		SchoolEmail:        teacher.SchoolEmail,
 		TeachingSubjects:   teachingSubjects,
@@ -234,7 +181,6 @@ func (s *TeacherServiceImpl) ListTeachers(ctx context.Context, req *req.ListTeac
 
 		teacherInfos = append(teacherInfos, &rsp.TeacherInfo{
 			TeacherId:          teacher.TeacherId,
-			UserId:             teacher.UserId,
 			EmployeeNumber:     teacher.EmployeeNumber,
 			SchoolEmail:        teacher.SchoolEmail,
 			TeachingSubjects:   teachingSubjects,

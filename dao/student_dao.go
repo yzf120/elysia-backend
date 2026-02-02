@@ -9,7 +9,8 @@ import (
 type StudentDAO interface {
 	CreateStudent(student *student.Student) error
 	GetStudentById(studentId string) (*student.Student, error)
-	GetStudentByUserId(userId string) (*student.Student, error)
+	GetStudentByPhoneNumber(phoneNumber string) (*student.Student, error)
+	GetStudentByStudentNumber(studentNumber string) (*student.Student, error)
 	UpdateStudent(studentId string, updates map[string]interface{}) error
 	DeleteStudent(studentId string) error
 	ListStudents(whereClause string, args []interface{}, limit, offset int32) ([]*student.Student, error)
@@ -40,11 +41,22 @@ func (d *studentDAOImpl) GetStudentById(studentId string) (*student.Student, err
 	return &student, nil
 }
 
-// GetStudentByUserId 根据用户ID查询学生
-func (d *studentDAOImpl) GetStudentByUserId(userId string) (*student.Student, error) {
+// GetStudentByPhoneNumber 根据手机号查询学生
+func (d *studentDAOImpl) GetStudentByPhoneNumber(phoneNumber string) (*student.Student, error) {
 	db := client.GetMySQLClient().GormDB
 	var student student.Student
-	err := db.Where("user_id = ?", userId).First(&student).Error
+	err := db.Where("phone_number = ?", phoneNumber).First(&student).Error
+	if err != nil {
+		return nil, err
+	}
+	return &student, nil
+}
+
+// GetStudentByStudentNumber 根据学号查询学生
+func (d *studentDAOImpl) GetStudentByStudentNumber(studentNumber string) (*student.Student, error) {
+	db := client.GetMySQLClient().GormDB
+	var student student.Student
+	err := db.Where("student_number = ?", studentNumber).First(&student).Error
 	if err != nil {
 		return nil, err
 	}

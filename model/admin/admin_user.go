@@ -9,6 +9,7 @@ type AdminUser struct {
 	Id                 int64     `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
 	AdminId            string    `gorm:"column:admin_id;type:varchar(64);uniqueIndex;not null" json:"admin_id"`
 	Username           string    `gorm:"column:username;type:varchar(128);uniqueIndex;not null" json:"username"`
+	PhoneNumber        string    `gorm:"column:phone_number;type:varchar(20);uniqueIndex" json:"phone_number"`
 	Password           string    `gorm:"column:password;type:varchar(512);not null" json:"-"`
 	RealName           string    `gorm:"column:real_name;type:varchar(128);not null" json:"real_name"`
 	Email              string    `gorm:"column:email;type:varchar(128);uniqueIndex;not null" json:"email"`

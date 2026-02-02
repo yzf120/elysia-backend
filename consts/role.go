@@ -3,9 +3,9 @@ package consts
 // 用户角色常量
 const (
 	// 角色类型
-	RoleStudent = "student" // 学生
-	RoleTeacher = "teacher" // 教师
-	RoleAdmin   = "admin"   // 管理员
+	RoleStudent    = "student"     // 学生
+	RoleTeacher    = "teacher"     // 教师
+	RoleAdmin      = "admin"       // 管理员
 	RoleSuperAdmin = "super_admin" // 超级管理员
 )
 
@@ -37,6 +37,13 @@ const (
 	StudentStatusActive   = 1 // 正常
 )
 
+// 管理员状态常量
+const (
+	AdminStatusInactive = 0 // 未激活
+	AdminStatusActive   = 1 // 正常
+	AdminStatusDisabled = 2 // 禁用
+)
+
 // 班级状态常量
 const (
 	ClassStatusEnded    = 0 // 已结束
@@ -59,9 +66,9 @@ const (
 
 // 注册来源常量
 const (
-	RegisterSourcePhone      = "phone"      // 手机号注册
+	RegisterSourcePhone       = "phone"       // 手机号注册
 	RegisterSourceMiniProgram = "miniprogram" // 小程序注册
-	RegisterSourceManual     = "manual"     // 手动创建
-	RegisterSourceSMS        = "sms"        // 短信验证码注册
-	RegisterSourceTeacher    = "teacher"    // 教师注册
+	RegisterSourceManual      = "manual"      // 手动创建
+	RegisterSourceSMS         = "sms"         // 短信验证码注册
+	RegisterSourceTeacher     = "teacher"     // 教师注册
 )

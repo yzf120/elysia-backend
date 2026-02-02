@@ -9,7 +9,7 @@ import (
 type TeacherDAO interface {
 	CreateTeacher(teacher *teacher.Teacher) error
 	GetTeacherById(teacherId string) (*teacher.Teacher, error)
-	GetTeacherByUserId(userId string) (*teacher.Teacher, error)
+	GetTeacherByPhoneNumber(phoneNumber string) (*teacher.Teacher, error)
 	GetTeacherByEmployeeNumber(employeeNumber string) (*teacher.Teacher, error)
 	GetTeacherBySchoolEmail(schoolEmail string) (*teacher.Teacher, error)
 	UpdateTeacher(teacherId string, updates map[string]interface{}) error
@@ -42,11 +42,11 @@ func (d *teacherDAOImpl) GetTeacherById(teacherId string) (*teacher.Teacher, err
 	return &teacher, nil
 }
 
-// GetTeacherByUserId 根据用户ID查询教师
-func (d *teacherDAOImpl) GetTeacherByUserId(userId string) (*teacher.Teacher, error) {
+// GetTeacherByPhoneNumber 根据手机号查询教师
+func (d *teacherDAOImpl) GetTeacherByPhoneNumber(phoneNumber string) (*teacher.Teacher, error) {
 	db := client.GetMySQLClient().GormDB
 	var teacher teacher.Teacher
-	err := db.Where("user_id = ?", userId).First(&teacher).Error
+	err := db.Where("phone_number = ?", phoneNumber).First(&teacher).Error
 	if err != nil {
 		return nil, err
 	}

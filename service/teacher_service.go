@@ -8,7 +8,6 @@ import (
 
 	"github.com/yzf120/elysia-backend/dao"
 	"github.com/yzf120/elysia-backend/errs"
-	"github.com/yzf120/elysia-backend/model"
 	"github.com/yzf120/elysia-backend/model/teacher"
 	"github.com/yzf120/elysia-backend/utils"
 	"golang.org/x/crypto/bcrypt"
@@ -17,7 +16,7 @@ import (
 // TeacherService 教师服务
 type TeacherService struct {
 	teacherDAO              dao.TeacherDAO
-	userDAO                 dao.UserDAO
+	approvalDAO             dao.TeacherApprovalDAO
 	verificationCodeService *utils.VerificationCodeService
 	jwtService              *utils.JWTService
 }
@@ -26,7 +25,7 @@ type TeacherService struct {
 func NewTeacherService() *TeacherService {
 	return &TeacherService{
 		teacherDAO:              dao.NewTeacherDAO(),
-		userDAO:                 dao.NewUserDAO(),
+		approvalDAO:             dao.NewTeacherApprovalDAO(),
 		verificationCodeService: utils.NewVerificationCodeService(),
 		jwtService:              utils.NewJWTService(),
 	}
@@ -52,41 +51,26 @@ func (s *TeacherService) RegisterTeacher(ctx context.Context, phoneNumber, passw
 	}
 
 	// 检查手机号是否已存在
-	existingUser, _ := s.userDAO.GetUserByPhoneNumber(phoneNumber)
-	if existingUser != nil {
+	existingTeacher, _ = s.teacherDAO.GetTeacherByPhoneNumber(phoneNumber)
+	if existingTeacher != nil {
 		return nil, errs.NewCommonError(errs.ErrBadRequest, "手机号已被注册")
 	}
 
-	// 创建用户账号
+	// 密码加密
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, errs.NewCommonError(errs.ErrInternal, "密码加密失败")
-	}
-
-	userId := fmt.Sprintf("user_%d", time.Now().UnixNano())
-	user := &model.User{
-		UserId:         userId,
-		UserName:       realName,
-		Password:       string(hashedPassword),
-		Email:          schoolEmail,
-		PhoneNumber:    phoneNumber,
-		ChineseName:    realName,
-		RegisterSource: "teacher",
-		UserType:       "teacher",
-		Status:         2, // 可用状态
-	}
-
-	if err := s.userDAO.CreateUser(user); err != nil {
-		return nil, errs.NewCommonError(errs.ErrInternal, "创建用户失败: "+err.Error())
 	}
 
 	// 创建教师信息
 	teacherId := fmt.Sprintf("tea_%d", time.Now().UnixNano())
 	teachingSubjectsJSON, _ := json.Marshal(teachingSubjects)
 
-	teacher := &teacher.Teacher{
+	t := &teacher.Teacher{
 		TeacherId:          teacherId,
-		UserId:             userId,
+		PhoneNumber:        phoneNumber,
+		Password:           string(hashedPassword),
+		TeacherName:        realName,
 		EmployeeNumber:     employeeNumber,
 		SchoolEmail:        schoolEmail,
 		TeachingSubjects:   string(teachingSubjectsJSON),
@@ -95,66 +79,41 @@ func (s *TeacherService) RegisterTeacher(ctx context.Context, phoneNumber, passw
 		Status:             0, // 未激活
 	}
 
-	if err := s.teacherDAO.CreateTeacher(teacher); err != nil {
+	if err := s.teacherDAO.CreateTeacher(t); err != nil {
 		return nil, errs.NewCommonError(errs.ErrInternal, "创建教师信息失败: "+err.Error())
 	}
 
-	return teacher, nil
-}
-
-// LoginTeacher 教师登录
-func (s *TeacherService) LoginTeacher(ctx context.Context, phoneNumber, password string) (*teacher.Teacher, *model.User, string, error) {
-	// 参数校验
-	if phoneNumber == "" || password == "" {
-		return nil, nil, "", errs.NewCommonError(errs.ErrBadRequest, "手机号和密码不能为空")
+	// 创建审批单
+	approvalId := fmt.Sprintf("APV%d", time.Now().UnixNano())
+	approval := &teacher.TeacherApproval{
+		ApprovalId:       approvalId,
+		TeacherId:        teacherId,
+		EmployeeNumber:   employeeNumber,
+		SchoolEmail:      schoolEmail,
+		TeacherName:      realName,
+		Phone:            phoneNumber,
+		Department:       department,
+		TeachingSubjects: string(teachingSubjectsJSON),
+		ApprovalStatus:   0, // 待审批
 	}
 
-	// 查询用户
-	user, err := s.userDAO.GetUserByPhoneNumber(phoneNumber)
-	if err != nil || user == nil {
-		return nil, nil, "", errs.NewCommonError(errs.ErrBadRequest, "用户不存在")
+	if err := s.approvalDAO.CreateApproval(approval); err != nil {
+		return nil, errs.NewCommonError(errs.ErrInternal, "创建审批单失败: "+err.Error())
 	}
 
-	// 验证密码
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		return nil, nil, "", errs.NewCommonError(errs.ErrBadRequest, "密码错误")
-	}
-
-	// 检查用户类型
-	if user.UserType != "teacher" {
-		return nil, nil, "", errs.NewCommonError(errs.ErrBadRequest, "该账号不是教师账号")
-	}
-
-	// 查询教师信息
-	teacher, err := s.teacherDAO.GetTeacherByUserId(user.UserId)
-	if err != nil || teacher == nil {
-		return nil, nil, "", errs.NewCommonError(errs.ErrBadRequest, "教师信息不存在")
-	}
-
-	// 检查教师状态
-	if teacher.Status != 1 {
-		return nil, nil, "", errs.NewCommonError(errs.ErrBadRequest, "教师账号未激活或已被禁用")
-	}
-
-	// 生成登录令牌
-	token, err := s.jwtService.GenerateToken(user.UserId)
-	if err != nil {
-		return nil, nil, "", errs.NewCommonError(errs.ErrInternal, "生成令牌失败: "+err.Error())
-	}
-
-	return teacher, user, token, nil
+	return t, nil
 }
 
 // VerifyTeacher 审核教师（管理员操作）
 func (s *TeacherService) VerifyTeacher(teacherId, verifierId string, approved bool, remark string) error {
 	// 查询教师信息
-	teacher, err := s.teacherDAO.GetTeacherById(teacherId)
-	if err != nil || teacher == nil {
+	t, err := s.teacherDAO.GetTeacherById(teacherId)
+	if err != nil || t == nil {
 		return errs.NewCommonError(errs.ErrBadRequest, "教师信息不存在")
 	}
 
 	// 检查审核状态
-	if teacher.VerificationStatus != 0 {
+	if t.VerificationStatus != 0 {
 		return errs.NewCommonError(errs.ErrBadRequest, "该教师已审核")
 	}
 
@@ -179,16 +138,16 @@ func (s *TeacherService) VerifyTeacher(teacherId, verifierId string, approved bo
 	return nil
 }
 
-// GetTeacherByUserId 根据用户ID获取教师信息
-func (s *TeacherService) GetTeacherByUserId(userId string) (*teacher.Teacher, error) {
-	teacher, err := s.teacherDAO.GetTeacherByUserId(userId)
+// GetTeacherById 根据教师ID获取教师信息
+func (s *TeacherService) GetTeacherById(teacherId string) (*teacher.Teacher, error) {
+	t, err := s.teacherDAO.GetTeacherById(teacherId)
 	if err != nil {
 		return nil, errs.NewCommonError(errs.ErrInternal, "查询教师信息失败: "+err.Error())
 	}
-	if teacher == nil {
+	if t == nil {
 		return nil, errs.NewCommonError(errs.ErrBadRequest, "教师信息不存在")
 	}
-	return teacher, nil
+	return t, nil
 }
 
 // UpdateTeacher 更新教师信息

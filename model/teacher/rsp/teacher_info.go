@@ -3,7 +3,6 @@ package rsp
 // TeacherInfo 教师信息
 type TeacherInfo struct {
 	TeacherId          string   `json:"teacher_id"`          // 教师ID
-	UserId             string   `json:"user_id"`             // 用户ID
 	EmployeeNumber     string   `json:"employee_number"`     // 工号
 	SchoolEmail        string   `json:"school_email"`        // 学校邮箱
 	TeachingSubjects   []string `json:"teaching_subjects"`   // 授课科目

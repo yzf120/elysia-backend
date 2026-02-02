@@ -40,33 +40,6 @@ func (s *AdminUserServiceImpl) CreateAdminUser(ctx context.Context, req *adminPb
 	}, nil
 }
 
-// LoginAdminUser 管理员用户登录
-func (s *AdminUserServiceImpl) LoginAdminUser(ctx context.Context, req *adminPb.LoginAdminUserRequest) (*adminPb.LoginAdminUserResponse, error) {
-	// 获取客户端IP地址
-	ipAddress := req.IpAddress
-	if ipAddress == "" {
-		// 可以从context中获取真实的客户端IP
-		ipAddress = "unknown"
-	}
-
-	// 调用service层处理登录逻辑
-	adminUserInfo, token, err := s.adminUserService.LoginAdminUser(ctx, req.Username, req.Password, ipAddress)
-	if err != nil {
-		code, msg := errs.ParseCommonError(err.Error())
-		return &adminPb.LoginAdminUserResponse{
-			Code:    int32(code),
-			Message: msg,
-		}, nil
-	}
-
-	return &adminPb.LoginAdminUserResponse{
-		Code:      consts.SuccessCode,
-		Message:   consts.MessageLoginSuccess,
-		AdminUser: adminUserInfo,
-		Token:     token,
-	}, nil
-}
-
 // UpdateAdminUserPassword 更新管理员用户密码
 func (s *AdminUserServiceImpl) UpdateAdminUserPassword(ctx context.Context, req *adminPb.UpdateAdminUserPasswordRequest) (*adminPb.UpdateAdminUserPasswordResponse, error) {
 	// 调用service层处理密码更新逻辑

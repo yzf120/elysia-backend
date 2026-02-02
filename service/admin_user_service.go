@@ -1,10 +1,10 @@
 package service
 
 import (
-	"context"
 	"fmt"
 	"time"
 
+	"github.com/yzf120/elysia-backend/consts"
 	"github.com/yzf120/elysia-backend/dao"
 	"github.com/yzf120/elysia-backend/errs"
 	"github.com/yzf120/elysia-backend/model/admin"
@@ -69,7 +69,7 @@ func (s *AdminUserService) CreateAdminUser(req *adminPb.CreateAdminUserRequest) 
 		RealName:   req.RealName,
 		Email:      req.Email,
 		Role:       req.Role,
-		Status:     1, // 默认启用
+		Status:     consts.AdminStatusInactive, // 注册时初始化为未激活
 		Remark:     req.Remark,
 		CreateTime: time.Now(),
 		UpdateTime: time.Now(),
@@ -82,53 +82,6 @@ func (s *AdminUserService) CreateAdminUser(req *adminPb.CreateAdminUserRequest) 
 	// 转换为响应格式
 	adminUserInfo := s.convertModelToAdminUserInfo(adminUser)
 	return adminUserInfo, nil
-}
-
-// LoginAdminUser 管理员用户登录
-func (s *AdminUserService) LoginAdminUser(ctx context.Context, username, password, ipAddress string) (*adminPb.AdminUserInfo, string, error) {
-	// 参数校验
-	if username == "" {
-		return nil, "", errs.NewCommonError(errs.ErrBadRequest, "用户名不能为空")
-	}
-	if password == "" {
-		return nil, "", errs.NewCommonError(errs.ErrBadRequest, "密码不能为空")
-	}
-
-	// 查询管理员用户
-	adminUser, hashedPassword, err := s.adminUserDAO.GetAdminUserByUsername(username)
-	if err != nil {
-		return nil, "", errs.NewCommonError(errs.ErrInternal, "查询管理员用户失败: "+err.Error())
-	}
-	if adminUser == nil {
-		return nil, "", errs.NewCommonError(errs.ErrBadRequest, "管理员用户不存在")
-	}
-
-	// 检查用户状态
-	if adminUser.Status != 1 {
-		return nil, "", errs.NewCommonError(errs.ErrBadRequest, "管理员账号已被禁用")
-	}
-
-	// 验证密码
-	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
-		// 密码错误，增加登录失败次数
-		s.handleLoginFailure(adminUser.AdminId)
-		return nil, "", errs.NewCommonError(errs.ErrBadRequest, "密码错误")
-	}
-
-	// 登录成功，更新登录信息
-	if err := s.adminUserDAO.UpdateAdminUserLoginInfo(adminUser.AdminId, ipAddress, time.Now()); err != nil {
-		return nil, "", errs.NewCommonError(errs.ErrInternal, "更新登录信息失败: "+err.Error())
-	}
-
-	// 生成登录令牌
-	token, err := s.jwtService.GenerateToken(adminUser.AdminId)
-	if err != nil {
-		return nil, "", errs.NewCommonError(errs.ErrInternal, "生成令牌失败: "+err.Error())
-	}
-
-	// 转换为响应格式
-	adminUserInfo := s.convertModelToAdminUserInfo(adminUser)
-	return adminUserInfo, token, nil
 }
 
 // UpdateAdminUserPassword 更新管理员用户密码

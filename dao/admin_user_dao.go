@@ -22,8 +22,14 @@ type AdminUserDAO interface {
 	// GetAdminUserByUsername 根据用户名查询管理员用户（包含密码）
 	GetAdminUserByUsername(username string) (*admin.AdminUser, string, error)
 
+	// GetAdminUserByPhoneNumber 根据手机号查询管理员用户
+	GetAdminUserByPhoneNumber(phoneNumber string) (*admin.AdminUser, error)
+
 	// GetAdminUserByEmail 根据邮箱查询管理员用户
 	GetAdminUserByEmail(email string) (*admin.AdminUser, error)
+
+	// GetAdminUserByUserId 根据用户ID查询管理员（已废弃）
+	// GetAdminUserByUserId(userId string) (*admin.AdminUser, error)
 
 	// UpdateAdminUser 更新管理员用户信息
 	UpdateAdminUser(adminUser *admin.AdminUser) error
@@ -107,6 +113,19 @@ func (d *adminUserDAOImpl) GetAdminUserByUsername(username string) (*admin.Admin
 	return &adminUser, password, nil
 }
 
+// GetAdminUserByPhoneNumber 根据手机号查询管理员用户
+func (d *adminUserDAOImpl) GetAdminUserByPhoneNumber(phoneNumber string) (*admin.AdminUser, error) {
+	var adminUser admin.AdminUser
+	err := d.db.Where("phone_number = ?", phoneNumber).First(&adminUser).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("查询管理员用户失败: %v", err)
+	}
+	return &adminUser, nil
+}
+
 // GetAdminUserByEmail 根据邮箱查询管理员用户
 func (d *adminUserDAOImpl) GetAdminUserByEmail(email string) (*admin.AdminUser, error) {
 	var adminUser admin.AdminUser
@@ -119,6 +138,19 @@ func (d *adminUserDAOImpl) GetAdminUserByEmail(email string) (*admin.AdminUser, 
 	}
 	return &adminUser, nil
 }
+
+// GetAdminUserByUserId 根据用户ID查询管理员（已废弃）
+// func (d *adminUserDAOImpl) GetAdminUserByUserId(userId string) (*admin.AdminUser, error) {
+// 	var adminUser admin.AdminUser
+// 	err := d.db.Where("user_id = ?", userId).First(&adminUser).Error
+// 	if err != nil {
+// 		if err == gorm.ErrRecordNotFound {
+// 			return nil, nil
+// 		}
+// 		return nil, fmt.Errorf("查询管理员用户失败: %v", err)
+// 	}
+// 	return &adminUser, nil
+// }
 
 // UpdateAdminUser 更新管理员用户信息
 func (d *adminUserDAOImpl) UpdateAdminUser(adminUser *admin.AdminUser) error {

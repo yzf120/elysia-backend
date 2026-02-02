@@ -27,7 +27,7 @@ func NewStudentServiceImpl() *StudentServiceImpl {
 func (s *StudentServiceImpl) CreateStudent(ctx context.Context, req *req.CreateStudentRequest) (*rsp.CreateStudentResponse, error) {
 	// 调用service层处理业务逻辑
 	student, err := s.studentService.CreateStudent(
-		req.UserId,
+		req.StudentId,
 		req.Major,
 		req.Grade,
 		req.ProgrammingLevel,
@@ -52,7 +52,7 @@ func (s *StudentServiceImpl) CreateStudent(ctx context.Context, req *req.CreateS
 // GetStudent 获取学生信息
 func (s *StudentServiceImpl) GetStudent(ctx context.Context, req *req.GetStudentRequest) (*rsp.GetStudentResponse, error) {
 	// 调用service层处理业务逻辑
-	student, err := s.studentService.GetStudentByUserId(req.UserId)
+	student, err := s.studentService.GetStudentByStudentId(req.StudentId)
 	if err != nil {
 		code, msg := errs.ParseCommonError(err.Error())
 		return &rsp.GetStudentResponse{
@@ -73,7 +73,6 @@ func (s *StudentServiceImpl) GetStudent(ctx context.Context, req *req.GetStudent
 
 	studentInfo := &rsp.StudentInfo{
 		StudentId:        student.StudentId,
-		UserId:           student.UserId,
 		StudentNumber:    student.StudentNumber,
 		Major:            student.Major,
 		Grade:            student.Grade,
@@ -187,7 +186,6 @@ func (s *StudentServiceImpl) ListStudents(ctx context.Context, req *req.ListStud
 
 		studentInfos = append(studentInfos, &rsp.StudentInfo{
 			StudentId:        student.StudentId,
-			UserId:           student.UserId,
 			StudentNumber:    student.StudentNumber,
 			Major:            student.Major,
 			Grade:            student.Grade,

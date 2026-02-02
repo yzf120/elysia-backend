@@ -3,22 +3,37 @@ package router
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/yzf120/elysia-backend/consts"
 	"github.com/yzf120/elysia-backend/errs"
+	"github.com/yzf120/elysia-backend/model/auth"
 	"github.com/yzf120/elysia-backend/model/student/req"
+	"github.com/yzf120/elysia-backend/service"
 	"github.com/yzf120/elysia-backend/service_impl"
 )
 
-var studentService = service_impl.NewStudentServiceImpl()
+var (
+	studentService     = service_impl.NewStudentServiceImpl()
+	studentAuthService = service.NewStudentAuthService()
+)
 
-// registerStudent 注册学生相关路由
-func registerStudent(router *mux.Router) {
-	router.HandleFunc("/api/student/create", createStudentHandler).Methods("POST")
-	router.HandleFunc("/api/student/get", getStudentHandler).Methods("GET")
-	router.HandleFunc("/api/student/update", updateStudentHandler).Methods("POST")
-	router.HandleFunc("/api/student/list", listStudentsHandler).Methods("POST")
-	router.HandleFunc("/api/student/update-progress", updateLearningProgressHandler).Methods("POST")
+// registerStudent 学生相关路由
+func registerStudent(publicRouter *mux.Router, protectedRouter *mux.Router) {
+	// 学生端注册登录接口
+	studentAuthRouter := publicRouter.PathPrefix("/api/student/auth").Subrouter()
+	studentAuthRouter.HandleFunc("/send-code-register", studentSendCodeHandler).Methods("POST")
+	studentAuthRouter.HandleFunc("/send-code-login", studentSendCodeHandler).Methods("POST")
+	studentAuthRouter.HandleFunc("/register-sms", studentRegisterWithSMSHandler).Methods("POST")
+	studentAuthRouter.HandleFunc("/login-sms", studentLoginWithSMSHandler).Methods("POST")
+	studentAuthRouter.HandleFunc("/login-password", studentLoginWithPasswordHandler).Methods("POST")
+
+	protectedRouter.HandleFunc("/api/student/create", createStudentHandler).Methods("POST")
+	protectedRouter.HandleFunc("/api/student/get", getStudentHandler).Methods("GET")
+	protectedRouter.HandleFunc("/api/student/update", updateStudentHandler).Methods("POST")
+	protectedRouter.HandleFunc("/api/student/list", listStudentsHandler).Methods("POST")
+	protectedRouter.HandleFunc("/api/student/update-progress", updateLearningProgressHandler).Methods("POST")
 }
 
 // createStudentHandler 创建学生信息处理器
@@ -72,11 +87,11 @@ func getStudentHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	// 从查询参数获取用户ID
-	userId := r.URL.Query().Get("user_id")
+	// 从查询参数获取学生ID
+	studentId := r.URL.Query().Get("student_id")
 
 	request := &req.GetStudentRequest{
-		UserId: userId,
+		StudentId: studentId,
 	}
 
 	// 调用服务
@@ -226,4 +241,104 @@ func updateLearningProgressHandler(w http.ResponseWriter, r *http.Request) {
 	respBytes, _ := json.Marshal(resp)
 	w.WriteHeader(http.StatusOK)
 	w.Write(respBytes)
+}
+
+// ==================== 学生认证处理器函数 ====================
+
+// studentSendCodeHandler 学生端发送验证码
+func studentSendCodeHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	setResponseHeaders(w)
+
+	req := &auth.SendCodeRequest{}
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+
+	// 从URL路径判断验证码类型
+	codeType := consts.Register
+	if strings.Contains(r.URL.Path, consts.Login) {
+		codeType = consts.Login
+	}
+
+	if err := smsService.SendVerificationCode(ctx, req.PhoneNumber, consts.RoleStudent, codeType); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	writeSuccessResponse(w, map[string]interface{}{
+		"message": "验证码发送成功",
+	})
+}
+
+// studentRegisterWithSMSHandler 学生注册
+func studentRegisterWithSMSHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	setResponseHeaders(w)
+
+	req := &auth.RegisterWithSMSRequest{}
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+
+	student, err := studentAuthService.RegisterWithSMS(ctx, req.PhoneNumber, req.Code, req.StudentNumber, req.Password)
+	if err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	writeSuccessResponse(w, map[string]interface{}{
+		"message":   "注册成功",
+		"user_info": student,
+	})
+}
+
+// studentLoginWithSMSHandler 学生验证码登录
+func studentLoginWithSMSHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	setResponseHeaders(w)
+
+	req := &auth.LoginWithSMSRequest{}
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+
+	student, token, err := studentAuthService.LoginWithSMS(ctx, req.PhoneNumber, req.Code)
+	if err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	writeSuccessResponse(w, map[string]interface{}{
+		"message":   "登录成功",
+		"user_info": student,
+		"token":     token,
+	})
+}
+
+// studentLoginWithPasswordHandler 学生密码登录
+func studentLoginWithPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	setResponseHeaders(w)
+
+	req := &auth.LoginWithPasswordRequest{}
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+
+	student, token, err := studentAuthService.LoginWithPassword(ctx, req.StudentNumber, req.Password)
+	if err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	writeSuccessResponse(w, map[string]interface{}{
+		"message":   "登录成功",
+		"user_info": student,
+		"token":     token,
+	})
 }
