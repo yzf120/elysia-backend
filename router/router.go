@@ -8,10 +8,22 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/yzf120/elysia-backend/authen"
+	"github.com/yzf120/elysia-backend/service"
+	"github.com/yzf120/elysia-backend/service_impl"
 	"github.com/yzf120/elysia-backend/utils"
 )
 
-func Init() {}
+func Init() {
+	// 初始化所有Service实例
+	// 注意：此函数必须在 dao.InitDB() 之后调用
+	adminUserService = service_impl.NewAdminUserServiceImpl()
+	adminAuthService = service.NewAdminAuthService()
+	studentService = service_impl.NewStudentServiceImpl()
+	studentAuthService = service.NewStudentAuthService()
+	teacherService = service_impl.NewTeacherServiceImpl()
+	teacherAuthService = service.NewTeacherAuthService()
+	smsService = service.NewSMSService()
+}
 
 func RegisterRouter(router *mux.Router) {
 	// 创建子路由器：公开路由（无需认证）
@@ -54,7 +66,7 @@ func registerApiRouters(publicRouter *mux.Router, protectedRouter *mux.Router) {
 // registerLogout 注册登出接口（需要认证）
 func registerLogout(router *mux.Router) {
 	// 学生登出接口
-	router.HandleFunc("/api/student/auth/logout", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/student/auth/logout", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -100,7 +112,7 @@ func registerLogout(router *mux.Router) {
 	}).Methods("POST")
 
 	// 教师登出接口
-	router.HandleFunc("/api/teacher/auth/logout", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/teacher/auth/logout", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -146,7 +158,7 @@ func registerLogout(router *mux.Router) {
 	}).Methods("POST")
 
 	// 管理员登出接口
-	router.HandleFunc("/api/admin/auth/logout", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/admin/auth/logout", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Access-Control-Allow-Origin", "*")

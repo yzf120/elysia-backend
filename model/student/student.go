@@ -28,5 +28,5 @@ type Student struct {
 
 // TableName 指定表名
 func (Student) TableName() string {
-	return "student"
+	return "students"
 }

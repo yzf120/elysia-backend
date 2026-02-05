@@ -15,14 +15,14 @@ import (
 )
 
 var (
-	adminUserService = service_impl.NewAdminUserServiceImpl()
-	adminAuthService = service.NewAdminAuthService()
+	adminUserService *service_impl.AdminUserServiceImpl
+	adminAuthService *service.AdminAuthService
 )
 
 // registerAdmin 注册管理员相关路由
 func registerAdmin(publicRouter *mux.Router, protectedRouter *mux.Router) {
 	// 管理员端注册登录接口
-	adminAuthRouter := publicRouter.PathPrefix("/api/admin/auth").Subrouter()
+	adminAuthRouter := publicRouter.PathPrefix("/admin/auth").Subrouter()
 	adminAuthRouter.HandleFunc("/send-code-register", adminSendCodeHandler).Methods("POST")
 	adminAuthRouter.HandleFunc("/send-code-login", adminSendCodeHandler).Methods("POST")
 	adminAuthRouter.HandleFunc("/register-sms", adminRegisterWithSMSHandler).Methods("POST")
@@ -30,11 +30,11 @@ func registerAdmin(publicRouter *mux.Router, protectedRouter *mux.Router) {
 	adminAuthRouter.HandleFunc("/login-password", adminLoginWithPasswordHandler).Methods("POST")
 
 	// 以下接口需要认证（受保护路由）
-	protectedRouter.HandleFunc("/api/admin/create", createAdminUserHandler).Methods("POST")
-	protectedRouter.HandleFunc("/api/admin/get", getAdminUserHandler).Methods("GET")
-	protectedRouter.HandleFunc("/api/admin/list", listAdminUsersHandler).Methods("POST")
-	protectedRouter.HandleFunc("/api/admin/update-password", updateAdminUserPasswordHandler).Methods("POST")
-	protectedRouter.HandleFunc("/api/admin/update-status", updateAdminUserStatusHandler).Methods("POST")
+	protectedRouter.HandleFunc("/admin/create", createAdminUserHandler).Methods("POST")
+	protectedRouter.HandleFunc("/admin/get", getAdminUserHandler).Methods("GET")
+	protectedRouter.HandleFunc("/admin/list", listAdminUsersHandler).Methods("POST")
+	protectedRouter.HandleFunc("/admin/update-password", updateAdminUserPasswordHandler).Methods("POST")
+	protectedRouter.HandleFunc("/admin/update-status", updateAdminUserStatusHandler).Methods("POST")
 }
 
 // createAdminUserHandler 创建管理员用户处理器

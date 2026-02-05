@@ -25,7 +25,7 @@ type Class struct {
 
 // TableName 指定表名
 func (Class) TableName() string {
-	return "class"
+	return "classes"
 }
 
 // ClassMember 班级成员关联数据模型
@@ -42,5 +42,5 @@ type ClassMember struct {
 
 // TableName 指定表名
 func (ClassMember) TableName() string {
-	return "class_member"
+	return "class_members"
 }

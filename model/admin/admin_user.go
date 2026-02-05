@@ -26,7 +26,7 @@ type AdminUser struct {
 
 // TableName 指定表名
 func (AdminUser) TableName() string {
-	return "admin_user"
+	return "admin_users"
 }
 
 // AdminOperationLog 管理员操作日志数据模型
@@ -42,5 +42,5 @@ type AdminOperationLog struct {
 
 // TableName 指定表名
 func (AdminOperationLog) TableName() string {
-	return "admin_operation_log"
+	return "admin_operation_logs"
 }

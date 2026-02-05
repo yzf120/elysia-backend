@@ -29,5 +29,5 @@ type TeacherApproval struct {
 
 // TableName 指定表名
 func (TeacherApproval) TableName() string {
-	return "teacher_approval"
+	return "teacher_approvals"
 }

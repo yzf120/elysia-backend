@@ -15,25 +15,25 @@ import (
 )
 
 var (
-	studentService     = service_impl.NewStudentServiceImpl()
-	studentAuthService = service.NewStudentAuthService()
+	studentService     *service_impl.StudentServiceImpl
+	studentAuthService *service.StudentAuthService
 )
 
 // registerStudent 学生相关路由
 func registerStudent(publicRouter *mux.Router, protectedRouter *mux.Router) {
 	// 学生端注册登录接口
-	studentAuthRouter := publicRouter.PathPrefix("/api/student/auth").Subrouter()
+	studentAuthRouter := publicRouter.PathPrefix("/student/auth").Subrouter()
 	studentAuthRouter.HandleFunc("/send-code-register", studentSendCodeHandler).Methods("POST")
 	studentAuthRouter.HandleFunc("/send-code-login", studentSendCodeHandler).Methods("POST")
 	studentAuthRouter.HandleFunc("/register-sms", studentRegisterWithSMSHandler).Methods("POST")
 	studentAuthRouter.HandleFunc("/login-sms", studentLoginWithSMSHandler).Methods("POST")
 	studentAuthRouter.HandleFunc("/login-password", studentLoginWithPasswordHandler).Methods("POST")
 
-	protectedRouter.HandleFunc("/api/student/create", createStudentHandler).Methods("POST")
-	protectedRouter.HandleFunc("/api/student/get", getStudentHandler).Methods("GET")
-	protectedRouter.HandleFunc("/api/student/update", updateStudentHandler).Methods("POST")
-	protectedRouter.HandleFunc("/api/student/list", listStudentsHandler).Methods("POST")
-	protectedRouter.HandleFunc("/api/student/update-progress", updateLearningProgressHandler).Methods("POST")
+	protectedRouter.HandleFunc("/student/create", createStudentHandler).Methods("POST")
+	protectedRouter.HandleFunc("/student/get", getStudentHandler).Methods("GET")
+	protectedRouter.HandleFunc("/student/update", updateStudentHandler).Methods("POST")
+	protectedRouter.HandleFunc("/student/list", listStudentsHandler).Methods("POST")
+	protectedRouter.HandleFunc("/student/update-progress", updateLearningProgressHandler).Methods("POST")
 }
 
 // createStudentHandler 创建学生信息处理器

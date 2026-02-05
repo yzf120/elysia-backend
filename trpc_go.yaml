@@ -8,36 +8,13 @@ server:
   app: elysia
   server: backend
   service:
-    # User http 服务
-    - name: trpc.elysia.backend.user
-      ip: 127.0.0.1
-      port: 8000
-      network: tcp
-      protocol: http_no_protocol
-      timeout: 3000
-    # Auth http 服务
-    - name: trpc.elysia.backend.auth
+    # backend http 服务
+    - name: trpc.elysia.backend.http
       ip: 127.0.0.1
       port: 8001
       network: tcp
       protocol: http_no_protocol
       timeout: 3000
-    
-    # HTTP REST API 服务
-    - name: trpc.elysia.backend.http
-      ip: 0.0.0.0
-      port: 8080
-      network: tcp
-      protocol: http_no_protocol
-      timeout: 3000
-
-  # 管理端口配置
-  admin:
-    ip: 127.0.0.1
-    port: 9028
-    read_timeout: 3000
-    write_timeout: 3000
-
 # 插件配置
 plugins:
   # 日志配置

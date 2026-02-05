@@ -1,0 +1,1265 @@
+{
+  "info": {
+    "_postman_id": "elysia-backend-api-collection",
+    "name": "Elysia 后端系统 API 集合",
+    "description": "Elysia 教育管理系统的完整 HTTP API 接口集合，包含学生、教师、管理员的所有接口",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "管理员接口",
+      "item": [
+        {
+          "name": "公共接口（无需认证）",
+          "item": [
+            {
+              "name": "发送注册验证码",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"phone_number\": \"13800138000\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/admin/auth/send-code-register",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "admin",
+                    "auth",
+                    "send-code-register"
+                  ]
+                },
+                "description": "为管理员注册发送短信验证码"
+              }
+            },
+            {
+              "name": "发送登录验证码",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"phone_number\": \"13800138000\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/admin/auth/send-code-login",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "admin",
+                    "auth",
+                    "send-code-login"
+                  ]
+                },
+                "description": "为管理员登录发送短信验证码"
+              }
+            },
+            {
+              "name": "短信注册",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"phone_number\": \"13800138000\", \"code\": \"123456\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/admin/auth/register-sms",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "admin",
+                    "auth",
+                    "register-sms"
+                  ]
+                },
+                "description": "使用短信验证码注册管理员账号"
+              }
+            },
+            {
+              "name": "短信登录",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"phone_number\": \"13800138000\", \"code\": \"123456\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/admin/auth/login-sms",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "admin",
+                    "auth",
+                    "login-sms"
+                  ]
+                },
+                "description": "使用短信验证码登录管理员账号"
+              }
+            },
+            {
+              "name": "密码登录",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"phone_number\": \"admin\", \"password\": \"Test@123456\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/admin/auth/login-password",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "admin",
+                    "auth",
+                    "login-password"
+                  ]
+                },
+                "description": "使用手机号和密码登录管理员账号"
+              }
+            }
+          ]
+        },
+        {
+          "name": "受保护接口（需要认证）",
+          "item": [
+            {
+              "name": "创建管理员",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"phone_number\": \"13800138001\", \"name\": \"测试管理员\", \"role\": \"assistant\", \"status\": \"active\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/admin/create",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "admin",
+                    "create"
+                  ]
+                },
+                "description": "创建新的管理员账号（需要管理员权限）"
+              }
+            },
+            {
+              "name": "获取管理员信息",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"admin_id\": \"{{admin_id}}\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/admin/get?admin_id={{admin_id}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "admin",
+                    "get"
+                  ]
+                },
+                "description": "根据管理员ID获取管理员详细信息"
+              }
+            },
+            {
+              "name": "查询管理员列表",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"page\": 1, \"page_size\": 10}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/admin/list",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "admin",
+                    "list"
+                  ]
+                },
+                "description": "分页查询管理员列表"
+              }
+            },
+            {
+              "name": "更新密码",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"admin_id\": \"{{admin_id}}\", \"old_password\": \"Test@123456\", \"new_password\": \"NewTest@123456\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/admin/update-password",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "admin",
+                    "update-password"
+                  ]
+                },
+                "description": "更新管理员密码"
+              }
+            },
+            {
+              "name": "更新状态",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"admin_id\": \"{{admin_id}}\", \"status\": \"inactive\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/admin/update-status",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "admin",
+                    "update-status"
+                  ]
+                },
+                "description": "更新管理员账号状态"
+              }
+            },
+            {
+              "name": "管理员登出",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "http://localhost:8001/api/admin/auth/logout",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "admin",
+                    "auth",
+                    "logout"
+                  ]
+                },
+                "description": "管理员账号登出，使当前token失效"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "学生接口",
+      "item": [
+        {
+          "name": "公共接口（无需认证）",
+          "item": [
+            {
+              "name": "发送注册验证码",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"phone_number\": \"13800138000\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/student/auth/send-code-register",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "student",
+                    "auth",
+                    "send-code-register"
+                  ]
+                },
+                "description": "为学生注册发送短信验证码"
+              }
+            },
+            {
+              "name": "发送登录验证码",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"phone_number\": \"13800138000\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/student/auth/send-code-login",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "student",
+                    "auth",
+                    "send-code-login"
+                  ]
+                },
+                "description": "为学生登录发送短信验证码"
+              }
+            },
+            {
+              "name": "短信注册",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"phone_number\": \"13800138000\", \"code\": \"123456\", \"student_number\": \"S20240001\", \"password\": \"Test@123456\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/student/auth/register-sms",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "student",
+                    "auth",
+                    "register-sms"
+                  ]
+                },
+                "description": "使用短信验证码注册学生账号"
+              }
+            },
+            {
+              "name": "短信登录",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"phone_number\": \"13800138000\", \"code\": \"123456\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/student/auth/login-sms",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "student",
+                    "auth",
+                    "login-sms"
+                  ]
+                },
+                "description": "使用短信验证码登录学生账号"
+              }
+            },
+            {
+              "name": "密码登录",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"student_number\": \"S20240001\", \"password\": \"Test@123456\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/student/auth/login-password",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "student",
+                    "auth",
+                    "login-password"
+                  ]
+                },
+                "description": "使用学号和密码登录学生账号"
+              }
+            }
+          ]
+        },
+        {
+          "name": "受保护接口（需要认证）",
+          "item": [
+            {
+              "name": "创建学生",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{student_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"name\": \"测试学生\", \"student_number\": \"S20240002\", \"phone_number\": \"13800138002\", \"grade\": \"大一\", \"major\": \"计算机科学\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/student/create",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "student",
+                    "create"
+                  ]
+                },
+                "description": "创建新的学生账号（需要学生权限）"
+              }
+            },
+            {
+              "name": "获取学生信息",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{student_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"student_id\": \"{{student_id}}\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/student/get?student_id={{student_id}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "student",
+                    "get"
+                  ]
+                },
+                "description": "根据学生ID获取学生详细信息"
+              }
+            },
+            {
+              "name": "更新学生信息",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{student_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"student_id\": \"{{student_id}}\", \"name\": \"更新后的学生姓名\", \"email\": \"updated@test.com\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/student/update",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "student",
+                    "update"
+                  ]
+                },
+                "description": "更新学生个人信息"
+              }
+            },
+            {
+              "name": "查询学生列表",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{student_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"page\": 1, \"page_size\": 10}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/student/list",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "student",
+                    "list"
+                  ]
+                },
+                "description": "分页查询学生列表"
+              }
+            },
+            {
+              "name": "更新学习进度",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{student_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"student_id\": \"{{student_id}}\", \"course_id\": \"C001\", \"progress\": 50, \"status\": \"in_progress\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/student/update-progress",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "student",
+                    "update-progress"
+                  ]
+                },
+                "description": "更新学生的学习进度信息"
+              }
+            },
+            {
+              "name": "学生登出",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{student_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "http://localhost:8001/api/student/auth/logout",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "student",
+                    "auth",
+                    "logout"
+                  ]
+                },
+                "description": "学生账号登出，使当前token失效"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "教师接口",
+      "item": [
+        {
+          "name": "公共接口（无需认证）",
+          "item": [
+            {
+              "name": "教师注册",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"name\": \"测试教师\", \"phone_number\": \"13800138000\", \"employee_number\": \"T20240001\", \"email\": \"teacher@test.com\", \"password\": \"Test@123456\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/register",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "register"
+                  ]
+                },
+                "description": "教师公开注册接口，注意此接口不在/api/teacher路径下"
+              }
+            },
+            {
+              "name": "发送登录验证码",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"phone_number\": \"13800138000\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/teacher/auth/send-code-login",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "teacher",
+                    "auth",
+                    "send-code-login"
+                  ]
+                },
+                "description": "为教师登录发送短信验证码"
+              }
+            },
+            {
+              "name": "短信登录",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"phone_number\": \"13800138000\", \"code\": \"123456\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/teacher/auth/login-sms",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "teacher",
+                    "auth",
+                    "login-sms"
+                  ]
+                },
+                "description": "使用短信验证码登录教师账号"
+              }
+            },
+            {
+              "name": "密码登录",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"employee_number\": \"T20240001\", \"password\": \"Test@123456\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/teacher/auth/login-password",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "teacher",
+                    "auth",
+                    "login-password"
+                  ]
+                },
+                "description": "使用工号和密码登录教师账号"
+              }
+            }
+          ]
+        },
+        {
+          "name": "受保护接口（需要认证）",
+          "item": [
+            {
+              "name": "获取教师信息",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{teacher_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"teacher_id\": \"{{teacher_id}}\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/teacher/get?teacher_id={{teacher_id}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "teacher",
+                    "get"
+                  ]
+                },
+                "description": "根据教师ID获取教师详细信息"
+              }
+            },
+            {
+              "name": "更新教师信息",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{teacher_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"teacher_id\": \"{{teacher_id}}\", \"name\": \"更新后的教师姓名\", \"email\": \"updated.teacher@test.com\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/teacher/update",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "teacher",
+                    "update"
+                  ]
+                },
+                "description": "更新教师个人信息"
+              }
+            },
+            {
+              "name": "查询教师列表",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{teacher_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"page\": 1, \"page_size\": 10}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/teacher/list",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "teacher",
+                    "list"
+                  ]
+                },
+                "description": "分页查询教师列表"
+              }
+            },
+            {
+              "name": "审核教师",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"teacher_id\": \"{{teacher_id}}\", \"verify_status\": \"approved\", \"verify_remark\": \"测试审核通过\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/api/teacher/verify",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "teacher",
+                    "verify"
+                  ]
+                },
+                "description": "管理员审核教师账号（需要管理员权限）"
+              }
+            },
+            {
+              "name": "教师登出",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{teacher_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "http://localhost:8001/api/teacher/auth/logout",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "api",
+                    "teacher",
+                    "auth",
+                    "logout"
+                  ]
+                },
+                "description": "教师账号登出，使当前token失效"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "教师审批接口",
+      "item": [
+        {
+          "name": "教师端审批接口（需要教师认证）",
+          "item": [
+            {
+              "name": "获取教师的审批单",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{teacher_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "http://localhost:8001/teacher/{{teacher_id}}/approval",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "teacher",
+                    "{{teacher_id}}",
+                    "approval"
+                  ]
+                },
+                "description": "根据教师ID获取该教师的审批单信息"
+              }
+            },
+            {
+              "name": "获取审批单详情",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{teacher_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "http://localhost:8001/teacher/approvals/{{approval_id}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "teacher",
+                    "approvals",
+                    "{{approval_id}}"
+                  ]
+                },
+                "description": "根据审批单ID获取审批单详细信息"
+              }
+            }
+          ]
+        },
+        {
+          "name": "管理员端审批接口（需要管理员认证）",
+          "item": [
+            {
+              "name": "查询审批单列表",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"page\": 1, \"page_size\": 10}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/admin/teacher/approvals?page=1&page_size=10",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "admin",
+                    "teacher",
+                    "approvals"
+                  ]
+                },
+                "description": "管理员分页查询所有教师审批单列表"
+              }
+            },
+            {
+              "name": "审批教师",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"verify_status\": \"approved\", \"verify_remark\": \"测试审核通过\"}"
+                },
+                "url": {
+                  "raw": "http://localhost:8001/admin/teacher/approvals/{{approval_id}}/approve",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "admin",
+                    "teacher",
+                    "approvals",
+                    "{{approval_id}}",
+                    "approve"
+                  ]
+                },
+                "description": "管理员审批教师账号"
+              }
+            },
+            {
+              "name": "删除审批单",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{admin_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "http://localhost:8001/admin/teacher/approvals/{{approval_id}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "8001",
+                  "path": [
+                    "admin",
+                    "teacher",
+                    "approvals",
+                    "{{approval_id}}"
+                  ]
+                },
+                "description": "管理员删除审批单"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8001"
+    },
+    {
+      "key": "admin_token",
+      "value": "您的管理员token，从登录接口获取"
+    },
+    {
+      "key": "student_token",
+      "value": "您的学生token，从登录接口获取"
+    },
+    {
+      "key": "teacher_token",
+      "value": "您的教师token，从登录接口获取"
+    },
+    {
+      "key": "admin_id",
+      "value": "您的管理员ID，从登录接口获取"
+    },
+    {
+      "key": "student_id",
+      "value": "您的学生ID，从登录接口获取"
+    },
+    {
+      "key": "teacher_id",
+      "value": "您的教师ID，从登录接口获取"
+    },
+    {
+      "key": "approval_id",
+      "value": "您的审批单ID，从获取审批单接口获取"
+    }
+  ]
+}

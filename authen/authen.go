@@ -81,7 +81,7 @@ func Authen(next http.Handler) http.Handler {
 			userType = "student"
 		} else if strings.HasPrefix(userID, "tea_") {
 			userType = "teacher"
-		} else if strings.HasPrefix(userID, "adm_") {
+		} else if strings.HasPrefix(userID, "admin_") {
 			userType = "admin"
 		} else {
 			// 如果无法识别用户类型，返回错误

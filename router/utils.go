@@ -8,7 +8,7 @@ import (
 	"github.com/yzf120/elysia-backend/errs"
 )
 
-var smsService = service.NewSMSService()
+var smsService *service.SMSService
 
 // setResponseHeaders 设置响应头
 func setResponseHeaders(w http.ResponseWriter) {

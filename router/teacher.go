@@ -15,24 +15,24 @@ import (
 )
 
 var (
-	teacherService     = service_impl.NewTeacherServiceImpl()
-	teacherAuthService = service.NewTeacherAuthService()
+	teacherService     *service_impl.TeacherServiceImpl
+	teacherAuthService *service.TeacherAuthService
 )
 
 // registerTeacher 注册教师相关路由
 func registerTeacher(publicRouter *mux.Router, protectedRouter *mux.Router) {
 	// 教师端注册登录接口
-	teacherAuthRouter := publicRouter.PathPrefix("/api/teacher/auth").Subrouter()
+	teacherAuthRouter := publicRouter.PathPrefix("/teacher/auth").Subrouter()
 	teacherAuthRouter.HandleFunc("/send-code-login", teacherSendCodeHandler).Methods("POST")
 	teacherAuthRouter.HandleFunc("/login-sms", teacherLoginWithSMSHandler).Methods("POST")
 	teacherAuthRouter.HandleFunc("/login-password", teacherLoginWithPasswordHandler).Methods("POST")
 	publicRouter.HandleFunc("/register", registerTeacherHandler).Methods("POST")
 
 	// 以下接口需要认证（受保护路由）
-	protectedRouter.HandleFunc("/api/teacher/get", getTeacherHandler).Methods("GET")
-	protectedRouter.HandleFunc("/api/teacher/update", updateTeacherHandler).Methods("POST")
-	protectedRouter.HandleFunc("/api/teacher/list", listTeachersHandler).Methods("POST")
-	protectedRouter.HandleFunc("/api/teacher/verify", verifyTeacherHandler).Methods("POST")
+	protectedRouter.HandleFunc("/teacher/get", getTeacherHandler).Methods("GET")
+	protectedRouter.HandleFunc("/teacher/update", updateTeacherHandler).Methods("POST")
+	protectedRouter.HandleFunc("/teacher/list", listTeachersHandler).Methods("POST")
+	protectedRouter.HandleFunc("/teacher/verify", verifyTeacherHandler).Methods("POST")
 }
 
 // registerTeacherHandler 教师注册处理器
