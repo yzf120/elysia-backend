@@ -18,7 +18,7 @@ type SMSService struct {
 	teacherDAO              dao.TeacherDAO
 	adminUserDAO            dao.AdminUserDAO
 	verificationCodeService *utils.VerificationCodeService
-	smsClient               *utils.TencentSMSClient
+	smsClient               *utils.AliyunSMSClient
 }
 
 // NewSMSService 创建短信服务
@@ -28,7 +28,7 @@ func NewSMSService() *SMSService {
 		teacherDAO:              dao.NewTeacherDAO(),
 		adminUserDAO:            dao.NewAdminUserDAO(),
 		verificationCodeService: utils.NewVerificationCodeService(),
-		smsClient:               utils.NewTencentSMSClient(),
+		smsClient:               utils.NewAliyunSMSClient(),
 	}
 }
 
@@ -108,14 +108,14 @@ func (s *SMSService) SendVerificationCode(ctx context.Context, phoneNumber, user
 		return errs.NewCommonError(errs.ErrInternal, "保存验证码失败: "+err.Error())
 	}
 
-	// 获取短信模板ID
-	templateId := os.Getenv("TENCENT_SMS_TEMPLATE_ID")
-	if templateId == "" {
-		return errs.NewCommonError(errs.ErrInternal, "短信模板ID未配置")
+	// 获取短信模板CODE
+	templateCode := os.Getenv("ALIYUN_SMS_TEMPLATE_CODE")
+	if templateCode == "" {
+		templateCode = "100001" // 默认模板CODE
 	}
 
 	// 发送短信
-	if err := s.smsClient.SendVerificationCode(phoneNumber, code, templateId); err != nil {
+	if err := s.smsClient.SendVerificationCode(phoneNumber, code, templateCode); err != nil {
 		// 发送失败，删除Redis中的验证码
 		s.verificationCodeService.DeleteVerificationCode(phoneNumber, codeKey)
 		return errs.NewCommonError(errs.ErrInternal, "发送短信失败: "+err.Error())

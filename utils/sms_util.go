@@ -2,67 +2,140 @@ package utils
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"os"
+	"strings"
 
-	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
-	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
-	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
-	sms "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms/v20210111"
+	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
+	dypnsapi20170525 "github.com/alibabacloud-go/dypnsapi-20170525/v3/client"
+	util "github.com/alibabacloud-go/tea-utils/v2/service"
+	"github.com/alibabacloud-go/tea/tea"
+	credential "github.com/aliyun/credentials-go/credentials"
 )
 
-// TencentSMSClient 腾讯云短信客户端
-type TencentSMSClient struct {
-	client *sms.Client
+// AliyunSMSClient 阿里云短信客户端
+type AliyunSMSClient struct {
+	client *dypnsapi20170525.Client
 }
 
-// NewTencentSMSClient 创建腾讯云短信客户端
-func NewTencentSMSClient() *TencentSMSClient {
-	secretId := os.Getenv("TENCENT_SMS_SECRET_ID")
-	secretKey := os.Getenv("TENCENT_SMS_SECRET_KEY")
-	region := os.Getenv("TENCENT_SMS_REGION")
-
-	if region == "" {
-		region = "ap-guangzhou"
+// NewAliyunSMSClient 创建阿里云短信客户端
+func NewAliyunSMSClient() *AliyunSMSClient {
+	client, err := createAliyunClient()
+	if err != nil {
+		fmt.Printf("创建阿里云短信客户端失败: %v\n", err)
+		return nil
 	}
 
-	credential := common.NewCredential(secretId, secretKey)
-	cpf := profile.NewClientProfile()
-	cpf.HttpProfile.Endpoint = "sms.tencentcloudapi.com"
-
-	client, _ := sms.NewClient(credential, region, cpf)
-
-	return &TencentSMSClient{
+	return &AliyunSMSClient{
 		client: client,
 	}
 }
 
-// SendVerificationCode 发送验证码短信
-func (c *TencentSMSClient) SendVerificationCode(phoneNumber, code, templateId string) error {
-	sdkAppId := os.Getenv("TENCENT_SMS_SDK_APP_ID")
-	signName := os.Getenv("TENCENT_SMS_SIGN_NAME")
-
-	request := sms.NewSendSmsRequest()
-	request.SmsSdkAppId = common.StringPtr(sdkAppId)
-	request.SignName = common.StringPtr(signName)
-	request.TemplateId = common.StringPtr(templateId)
-	request.TemplateParamSet = common.StringPtrs([]string{code, "5"})
-	request.PhoneNumberSet = common.StringPtrs([]string{"+86" + phoneNumber})
-
-	response, err := c.client.SendSms(request)
-	if _, ok := err.(*errors.TencentCloudSDKError); ok {
-		return fmt.Errorf("腾讯云SDK错误: %v", err)
-	}
+// createAliyunClient 使用凭据初始化账号Client
+func createAliyunClient() (*dypnsapi20170525.Client, error) {
+	// 工程代码建议使用更安全的无AK方式，凭据配置方式请参见：https://help.aliyun.com/document_detail/378661.html
+	// 这里会自动从环境变量读取 ALIBABA_CLOUD_ACCESS_KEY_ID 和 ALIBABA_CLOUD_ACCESS_KEY_SECRET
+	config := new(credential.Config).
+		SetType("access_key").
+		SetAccessKeyId(os.Getenv("ALIBABA_CLOUD_ACCESS_KEY_ID")).
+		SetAccessKeySecret(os.Getenv("ALIBABA_CLOUD_ACCESS_KEY_SECRET"))
+	credential, err := credential.NewCredential(config)
 	if err != nil {
-		return fmt.Errorf("发送短信失败: %v", err)
+		return nil, err
 	}
 
-	if len(response.Response.SendStatusSet) > 0 {
-		status := response.Response.SendStatusSet[0]
-		if *status.Code != "Ok" {
-			return fmt.Errorf("短信发送失败: %s", *status.Message)
+	openapiConfig := &openapi.Config{
+		Credential: credential,
+	}
+	// Endpoint 请参考 https://api.aliyun.com/product/Dypnsapi
+	openapiConfig.Endpoint = tea.String("dypnsapi.aliyuncs.com")
+
+	client, err := dypnsapi20170525.NewClient(openapiConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return client, nil
+}
+
+// SendVerificationCode 发送验证码短信
+func (c *AliyunSMSClient) SendVerificationCode(phoneNumber, code, templateCode string) error {
+	if c.client == nil {
+		return fmt.Errorf("阿里云短信客户端未初始化")
+	}
+
+	signName := os.Getenv("ALIYUN_SMS_SIGN_NAME")
+	if signName == "" {
+		signName = "速通互联验证码" // 默认签名
+	}
+
+	// 构建模板参数 {"code":"123456","min":"5"}
+	templateParam := fmt.Sprintf(`{"code":"%s","min":"5"}`, code)
+
+	sendSmsVerifyCodeRequest := &dypnsapi20170525.SendSmsVerifyCodeRequest{
+		SignName:      tea.String(signName),
+		TemplateCode:  tea.String(templateCode),
+		PhoneNumber:   tea.String(phoneNumber),
+		TemplateParam: tea.String(templateParam),
+	}
+
+	runtime := &util.RuntimeOptions{}
+
+	var sendErr error
+	tryErr := func() error {
+		defer func() {
+			if r := tea.Recover(recover()); r != nil {
+				sendErr = r
+			}
+		}()
+
+		resp, err := c.client.SendSmsVerifyCodeWithOptions(sendSmsVerifyCodeRequest, runtime)
+		if err != nil {
+			return err
 		}
+
+		// 检查响应状态
+		if resp.Body != nil && resp.Body.Code != nil && *resp.Body.Code != "OK" {
+			message := "未知错误"
+			if resp.Body.Message != nil {
+				message = *resp.Body.Message
+			}
+			return fmt.Errorf("短信发送失败: %s", message)
+		}
+
+		return nil
+	}()
+
+	if tryErr != nil {
+		var error = &tea.SDKError{}
+		if _t, ok := tryErr.(*tea.SDKError); ok {
+			error = _t
+		} else {
+			error.Message = tea.String(tryErr.Error())
+		}
+
+		// 错误处理
+		errorMsg := tea.StringValue(error.Message)
+
+		// 尝试解析诊断信息
+		var data interface{}
+		if error.Data != nil {
+			d := json.NewDecoder(strings.NewReader(tea.StringValue(error.Data)))
+			d.Decode(&data)
+			if m, ok := data.(map[string]interface{}); ok {
+				if recommend, ok := m["Recommend"]; ok {
+					errorMsg = fmt.Sprintf("%s (建议: %v)", errorMsg, recommend)
+				}
+			}
+		}
+
+		return fmt.Errorf("阿里云短信发送失败: %s", errorMsg)
+	}
+
+	if sendErr != nil {
+		return fmt.Errorf("短信发送异常: %v", sendErr)
 	}
 
 	return nil

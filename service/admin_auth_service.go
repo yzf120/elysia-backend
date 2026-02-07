@@ -17,7 +17,6 @@ import (
 type AdminAuthService struct {
 	adminUserDAO            dao.AdminUserDAO
 	verificationCodeService *utils.VerificationCodeService
-	smsClient               *utils.TencentSMSClient
 	jwtService              *utils.JWTService
 }
 
@@ -26,7 +25,6 @@ func NewAdminAuthService() *AdminAuthService {
 	return &AdminAuthService{
 		adminUserDAO:            dao.NewAdminUserDAO(),
 		verificationCodeService: utils.NewVerificationCodeService(),
-		smsClient:               utils.NewTencentSMSClient(),
 		jwtService:              utils.NewJWTService(),
 	}
 }

@@ -14,7 +14,6 @@ type TeacherAuthService struct {
 	teacherDAO              dao.TeacherDAO
 	teacherApprovalDAO      dao.TeacherApprovalDAO
 	verificationCodeService *utils.VerificationCodeService
-	smsClient               *utils.TencentSMSClient
 	jwtService              *utils.JWTService
 }
 
@@ -24,7 +23,6 @@ func NewTeacherAuthService() *TeacherAuthService {
 		teacherDAO:              dao.NewTeacherDAO(),
 		teacherApprovalDAO:      dao.NewTeacherApprovalDAO(),
 		verificationCodeService: utils.NewVerificationCodeService(),
-		smsClient:               utils.NewTencentSMSClient(),
 		jwtService:              utils.NewJWTService(),
 	}
 }

@@ -16,7 +16,6 @@ import (
 type StudentAuthService struct {
 	studentDAO              dao.StudentDAO
 	verificationCodeService *utils.VerificationCodeService
-	smsClient               *utils.TencentSMSClient
 	jwtService              *utils.JWTService
 }
 
@@ -25,7 +24,6 @@ func NewStudentAuthService() *StudentAuthService {
 	return &StudentAuthService{
 		studentDAO:              dao.NewStudentDAO(),
 		verificationCodeService: utils.NewVerificationCodeService(),
-		smsClient:               utils.NewTencentSMSClient(),
 		jwtService:              utils.NewJWTService(),
 	}
 }
