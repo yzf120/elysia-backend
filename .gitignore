@@ -1,3 +1,9 @@
+# 环境变量和敏感信息（必须放在最前面）
+.env
+.env.example
+setup-env.sh
+setup-env.*.sh
+
 # 构建输出
 bin/
 elysia-backend
