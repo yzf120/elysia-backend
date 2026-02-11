@@ -24,7 +24,7 @@ func NewClassServiceImpl() *ClassServiceImpl {
 type CreateClassRequest struct {
 	TeacherId   string `json:"teacher_id"`   // 教师ID（必填）
 	ClassName   string `json:"class_name"`   // 班级名称（必填）
-	Subject     string `json:"subject"`      // 授课科目（必填）
+	SubjectId   string `json:"subject_id"`   // 科目ID（必填）
 	Semester    string `json:"semester"`     // 学期（必填）
 	Description string `json:"description"`  // 班级描述（可选）
 	MaxStudents int32  `json:"max_students"` // 学生人数上限（必填）
@@ -44,7 +44,7 @@ func (s *ClassServiceImpl) CreateClass(ctx context.Context, req *CreateClassRequ
 	class, err := s.classService.CreateClass(
 		req.TeacherId,
 		req.ClassName,
-		req.Subject,
+		req.SubjectId,
 		req.Semester,
 		req.Description,
 		req.MaxStudents,
@@ -286,7 +286,7 @@ type ClassInfo struct {
 	ClassName       string `json:"class_name"`       // 班级名称
 	ClassCode       string `json:"class_code"`       // 班级验证码
 	TeacherId       string `json:"teacher_id"`       // 教师ID
-	Subject         string `json:"subject"`          // 授课科目
+	SubjectId       string `json:"subject_id"`       // 科目ID
 	Semester        string `json:"semester"`         // 学期
 	MaxStudents     int32  `json:"max_students"`     // 学生人数上限
 	CurrentStudents int32  `json:"current_students"` // 当前学生人数
@@ -328,7 +328,7 @@ func (s *ClassServiceImpl) GetTeacherClasses(ctx context.Context, req *GetTeache
 			ClassName:       class.ClassName,
 			ClassCode:       class.ClassCode,
 			TeacherId:       class.TeacherId,
-			Subject:         class.Subject,
+			SubjectId:       class.SubjectId,
 			Semester:        class.Semester,
 			MaxStudents:     class.MaxStudents,
 			CurrentStudents: class.CurrentStudents,
@@ -353,14 +353,14 @@ func (s *ClassServiceImpl) GetTeacherClasses(ctx context.Context, req *GetTeache
 
 // UpdateClassRequest 更新班级信息请求
 type UpdateClassRequest struct {
-	TeacherId    string `json:"teacher_id"`    // 教师ID（必填）
-	ClassId      string `json:"class_id"`      // 班级ID（必填）
-	ClassName    string `json:"class_name"`    // 班级名称（可选）
-	Subject      string `json:"subject"`       // 授课科目（可选）
-	Description  string `json:"description"`   // 班级描述（可选）
-	Announcement string `json:"announcement"`  // 班级公告（可选）
-	MaxStudents  int32  `json:"max_students"`  // 学生人数上限（可选）
-	Status       int32  `json:"status"`        // 状态（可选，-1表示不更新）
+	TeacherId    string `json:"teacher_id"`   // 教师ID（必填）
+	ClassId      string `json:"class_id"`     // 班级ID（必填）
+	ClassName    string `json:"class_name"`   // 班级名称（可选）
+	SubjectId    string `json:"subject_id"`   // 科目ID（可选）
+	Description  string `json:"description"`  // 班级描述（可选）
+	Announcement string `json:"announcement"` // 班级公告（可选）
+	MaxStudents  int32  `json:"max_students"` // 学生人数上限（可选）
+	Status       int32  `json:"status"`       // 状态（可选，-1表示不更新）
 }
 
 // UpdateClassResponse 更新班级信息响应
@@ -376,8 +376,8 @@ func (s *ClassServiceImpl) UpdateClass(ctx context.Context, req *UpdateClassRequ
 	if req.ClassName != "" {
 		updates["class_name"] = req.ClassName
 	}
-	if req.Subject != "" {
-		updates["subject"] = req.Subject
+	if req.SubjectId != "" {
+		updates["subject_id"] = req.SubjectId
 	}
 	if req.Description != "" {
 		updates["description"] = req.Description
@@ -437,7 +437,7 @@ func (s *ClassServiceImpl) GetClassByCode(ctx context.Context, req *GetClassByCo
 		ClassName:       class.ClassName,
 		ClassCode:       class.ClassCode,
 		TeacherId:       class.TeacherId,
-		Subject:         class.Subject,
+		SubjectId:       class.SubjectId,
 		Semester:        class.Semester,
 		MaxStudents:     class.MaxStudents,
 		CurrentStudents: class.CurrentStudents,

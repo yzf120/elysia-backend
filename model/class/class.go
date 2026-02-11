@@ -10,8 +10,8 @@ type Class struct {
 	ClassId         string    `gorm:"column:class_id;type:varchar(64);uniqueIndex;not null" json:"class_id"`
 	ClassName       string    `gorm:"column:class_name;type:varchar(128);not null" json:"class_name"`
 	ClassCode       string    `gorm:"column:class_code;type:varchar(32);uniqueIndex;not null" json:"class_code"`
-	TeacherId       string    `gorm:"column:teacher_id;type:varchar(64);not null" json:"teacher_id"`
-	Subject         string    `gorm:"column:subject;type:varchar(128)" json:"subject"`
+	TeacherId       string    `gorm:"column:teacher_id;type:varchar(64);not null;index:idx_teacher" json:"teacher_id"`
+	SubjectId       string    `gorm:"column:subject_id;type:varchar(64);not null;index:idx_subject" json:"subject_id"`
 	Semester        string    `gorm:"column:semester;type:varchar(32)" json:"semester"`
 	MaxStudents     int32     `gorm:"column:max_students;type:int;not null;default:100" json:"max_students"`
 	CurrentStudents int32     `gorm:"column:current_students;type:int;not null;default:0" json:"current_students"`

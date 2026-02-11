@@ -1,7 +1,6 @@
 package dao
 
 import (
-	"github.com/yzf120/elysia-backend/client"
 	"github.com/yzf120/elysia-backend/model/student"
 )
 
@@ -26,15 +25,13 @@ func NewStudentDAO() StudentDAO {
 
 // CreateStudent 创建学生
 func (d *studentDAOImpl) CreateStudent(student *student.Student) error {
-	db := client.GetMySQLClient().GormDB
-	return db.Create(student).Error
+	return DB.Create(student).Error
 }
 
 // GetStudentById 根据学生ID查询学生
 func (d *studentDAOImpl) GetStudentById(studentId string) (*student.Student, error) {
-	db := client.GetMySQLClient().GormDB
 	var student student.Student
-	err := db.Where("student_id = ?", studentId).First(&student).Error
+	err := DB.Where("student_id = ?", studentId).First(&student).Error
 	if err != nil {
 		return nil, err
 	}
@@ -43,9 +40,8 @@ func (d *studentDAOImpl) GetStudentById(studentId string) (*student.Student, err
 
 // GetStudentByPhoneNumber 根据手机号查询学生
 func (d *studentDAOImpl) GetStudentByPhoneNumber(phoneNumber string) (*student.Student, error) {
-	db := client.GetMySQLClient().GormDB
 	var student student.Student
-	err := db.Where("phone_number = ?", phoneNumber).First(&student).Error
+	err := DB.Where("phone_number = ?", phoneNumber).First(&student).Error
 	if err != nil {
 		return nil, err
 	}
@@ -54,9 +50,8 @@ func (d *studentDAOImpl) GetStudentByPhoneNumber(phoneNumber string) (*student.S
 
 // GetStudentByStudentNumber 根据学号查询学生
 func (d *studentDAOImpl) GetStudentByStudentNumber(studentNumber string) (*student.Student, error) {
-	db := client.GetMySQLClient().GormDB
 	var student student.Student
-	err := db.Where("student_number = ?", studentNumber).First(&student).Error
+	err := DB.Where("student_number = ?", studentNumber).First(&student).Error
 	if err != nil {
 		return nil, err
 	}
@@ -65,21 +60,18 @@ func (d *studentDAOImpl) GetStudentByStudentNumber(studentNumber string) (*stude
 
 // UpdateStudent 更新学生信息
 func (d *studentDAOImpl) UpdateStudent(studentId string, updates map[string]interface{}) error {
-	db := client.GetMySQLClient().GormDB
-	return db.Model(&student.Student{}).Where("student_id = ?", studentId).Updates(updates).Error
+	return DB.Model(&student.Student{}).Where("student_id = ?", studentId).Updates(updates).Error
 }
 
 // DeleteStudent 删除学生
 func (d *studentDAOImpl) DeleteStudent(studentId string) error {
-	db := client.GetMySQLClient().GormDB
-	return db.Where("student_id = ?", studentId).Delete(&student.Student{}).Error
+	return DB.Where("student_id = ?", studentId).Delete(&student.Student{}).Error
 }
 
 // ListStudents 查询学生列表
 func (d *studentDAOImpl) ListStudents(whereClause string, args []interface{}, limit, offset int32) ([]*student.Student, error) {
-	db := client.GetMySQLClient().GormDB
 	var students []*student.Student
-	query := db.Model(&student.Student{})
+	query := DB.Model(&student.Student{})
 
 	if whereClause != "" {
 		query = query.Where(whereClause, args...)
@@ -91,9 +83,8 @@ func (d *studentDAOImpl) ListStudents(whereClause string, args []interface{}, li
 
 // CountStudents 统计学生数量
 func (d *studentDAOImpl) CountStudents(whereClause string, args []interface{}) (int32, error) {
-	db := client.GetMySQLClient().GormDB
 	var count int64
-	query := db.Model(&student.Student{})
+	query := DB.Model(&student.Student{})
 
 	if whereClause != "" {
 		query = query.Where(whereClause, args...)

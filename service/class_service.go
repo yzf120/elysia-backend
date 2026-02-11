@@ -12,26 +12,30 @@ import (
 
 // ClassService 班级服务
 type ClassService struct {
-	classDAO       dao.ClassDAO
-	classMemberDAO dao.ClassMemberDAO
-	teacherDAO     dao.TeacherDAO
-	studentDAO     dao.StudentDAO
+	classDAO          dao.ClassDAO
+	classMemberDAO    dao.ClassMemberDAO
+	teacherDAO        dao.TeacherDAO
+	studentDAO        dao.StudentDAO
+	subjectDAO        dao.SubjectDAO
+	teacherSubjectDAO dao.TeacherSubjectDAO
 }
 
 // NewClassService 创建班级服务
 func NewClassService() *ClassService {
 	return &ClassService{
-		classDAO:       dao.NewClassDAO(),
-		classMemberDAO: dao.NewClassMemberDAO(),
-		teacherDAO:     dao.NewTeacherDAO(),
-		studentDAO:     dao.NewStudentDAO(),
+		classDAO:          dao.NewClassDAO(),
+		classMemberDAO:    dao.NewClassMemberDAO(),
+		teacherDAO:        dao.NewTeacherDAO(),
+		studentDAO:        dao.NewStudentDAO(),
+		subjectDAO:        dao.NewSubjectDAO(),
+		teacherSubjectDAO: dao.NewTeacherSubjectDAO(),
 	}
 }
 
 // CreateClass 创建班级（教师操作）
-func (s *ClassService) CreateClass(teacherId, className, subject, semester, description string, maxStudents int32) (*classModel.Class, error) {
+func (s *ClassService) CreateClass(teacherId, className, subjectId, semester, description string, maxStudents int32) (*classModel.Class, error) {
 	// 参数校验
-	if teacherId == "" || className == "" || subject == "" || semester == "" {
+	if teacherId == "" || className == "" || subjectId == "" || semester == "" {
 		return nil, errs.NewCommonError(errs.ErrBadRequest, "必填参数不能为空")
 	}
 
@@ -46,6 +50,18 @@ func (s *ClassService) CreateClass(teacherId, className, subject, semester, desc
 		return nil, errs.NewCommonError(errs.ErrBadRequest, "教师账号未激活")
 	}
 
+	// 检查科目是否存在
+	subject, err := s.subjectDAO.GetSubjectById(subjectId)
+	if err != nil || subject == nil {
+		return nil, errs.NewCommonError(errs.ErrBadRequest, "科目不存在")
+	}
+
+	// 检查教师是否有权限教授该科目
+	teacherSubject, err := s.teacherSubjectDAO.GetTeacherSubject(teacherId, subjectId)
+	if err != nil || teacherSubject == nil || teacherSubject.Status != 1 {
+		return nil, errs.NewCommonError(errs.ErrBadRequest, "教师未被分配该科目或科目状态异常")
+	}
+
 	// 生成班级ID和验证码
 	classId := fmt.Sprintf("cls_%d", time.Now().UnixNano())
 	classCode := s.generateClassCode()
@@ -56,7 +72,7 @@ func (s *ClassService) CreateClass(teacherId, className, subject, semester, desc
 		ClassName:       className,
 		ClassCode:       classCode,
 		TeacherId:       teacherId,
-		Subject:         subject,
+		SubjectId:       subjectId,
 		Semester:        semester,
 		MaxStudents:     maxStudents,
 		CurrentStudents: 0,
