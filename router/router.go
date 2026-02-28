@@ -23,6 +23,7 @@ func Init() {
 	teacherService = service_impl.NewTeacherServiceImpl()
 	teacherAuthService = service.NewTeacherAuthService()
 	smsService = service.NewSMSService()
+	problemService = service_impl.NewProblemServiceImpl()
 }
 
 func RegisterRouter(router *mux.Router) {
@@ -60,6 +61,9 @@ func registerApiRouters(publicRouter *mux.Router, protectedRouter *mux.Router) {
 
 	// 教师审批单相关接口（需要认证）
 	RegisterTeacherApprovalRoutes(protectedRouter)
+
+	// 题目相关接口（增删改仅教师，查询学生和教师均可）
+	registerProblem(publicRouter, protectedRouter)
 
 }
 
