@@ -4,19 +4,24 @@ import (
 	"context"
 
 	"github.com/yzf120/elysia-backend/consts"
+	"github.com/yzf120/elysia-backend/dao"
 	"github.com/yzf120/elysia-backend/errs"
 	"github.com/yzf120/elysia-backend/service"
 )
 
 // ClassServiceImpl 班级服务实现（只做出入参处理）
 type ClassServiceImpl struct {
-	classService *service.ClassService
+	classService   *service.ClassService
+	teacherService *service.TeacherService
+	subjectService service.SubjectService
 }
 
 // NewClassServiceImpl 创建班级服务实现
 func NewClassServiceImpl() *ClassServiceImpl {
 	return &ClassServiceImpl{
-		classService: service.NewClassService(),
+		classService:   service.NewClassService(),
+		teacherService: service.NewTeacherService(),
+		subjectService: service.NewSubjectService(),
 	}
 }
 
@@ -229,17 +234,17 @@ type GetStudentClassesRequest struct {
 
 // GetStudentClassesResponse 获取学生加入的班级列表响应
 type GetStudentClassesResponse struct {
-	Code     int32              `json:"code"`      // 响应码 0-成功 其他-失败
-	Message  string             `json:"message"`   // 响应消息
-	Classes  []*ClassMemberInfo `json:"classes"`   // 班级列表
-	Total    int32              `json:"total"`     // 总数
-	Page     int32              `json:"page"`      // 当前页码
-	PageSize int32              `json:"page_size"` // 每页数量
+	Code     int32        `json:"code"`      // 响应码 0-成功 其他-失败
+	Message  string       `json:"message"`   // 响应消息
+	Classes  []*ClassInfo `json:"classes"`   // 班级列表（含完整班级信息）
+	Total    int32        `json:"total"`     // 总数
+	Page     int32        `json:"page"`      // 当前页码
+	PageSize int32        `json:"page_size"` // 每页数量
 }
 
 // GetStudentClasses 获取学生加入的班级列表
 func (s *ClassServiceImpl) GetStudentClasses(ctx context.Context, req *GetStudentClassesRequest) (*GetStudentClassesResponse, error) {
-	// 调用service层处理业务逻辑
+	// 调用service层处理业务逻辑，获取学生加入的班级成员记录
 	members, total, err := s.classService.GetStudentClasses(req.StudentId, req.Page, req.PageSize)
 	if err != nil {
 		code, msg := errs.ParseCommonError(err.Error())
@@ -249,18 +254,41 @@ func (s *ClassServiceImpl) GetStudentClasses(ctx context.Context, req *GetStuden
 		}, nil
 	}
 
-	// 转换为响应格式
-	classInfos := make([]*ClassMemberInfo, 0, len(members))
+	// 根据 class_id 查询完整班级信息
+	classInfos := make([]*ClassInfo, 0, len(members))
 	for _, member := range members {
-		classInfos = append(classInfos, &ClassMemberInfo{
-			ClassId:    member.ClassId,
-			StudentId:  member.StudentId,
-			JoinTime:   member.JoinTime.Format("2006-01-02 15:04:05"),
-			Status:     member.Status,
-			Remark:     member.Remark,
-			CreateTime: member.CreateTime.Format("2006-01-02 15:04:05"),
-			UpdateTime: member.UpdateTime.Format("2006-01-02 15:04:05"),
-		})
+		class, err := s.classService.GetClassById(member.ClassId)
+		if err != nil || class == nil {
+			continue
+		}
+		info := &ClassInfo{
+			ClassId:         class.ClassId,
+			ClassName:       class.ClassName,
+			ClassCode:       class.ClassCode,
+			TeacherId:       class.TeacherId,
+			SubjectId:       class.SubjectId,
+			Subject:         class.Subject,
+			Semester:        class.Semester,
+			MaxStudents:     class.MaxStudents,
+			CurrentStudents: class.CurrentStudents,
+			Description:     class.Description,
+			Announcement:    class.Announcement,
+			QrCodeUrl:       class.QrCodeUrl,
+			Status:          class.Status,
+			CreateTime:      class.CreateTime.Format("2006-01-02 15:04:05"),
+			UpdateTime:      class.UpdateTime.Format("2006-01-02 15:04:05"),
+		}
+		// 查询教师姓名
+		if teacher, err := s.teacherService.GetTeacherById(class.TeacherId); err == nil && teacher != nil {
+			info.TeacherName = teacher.TeacherName
+		}
+		// 查询科目名称（兼容旧数据）
+		if class.Subject != "" {
+			info.SubjectName = class.Subject
+		} else if subj, err := s.subjectService.GetSubjectById(class.SubjectId); err == nil && subj != nil {
+			info.SubjectName = subj.SubjectName
+		}
+		classInfos = append(classInfos, info)
 	}
 
 	return &GetStudentClassesResponse{
@@ -286,7 +314,10 @@ type ClassInfo struct {
 	ClassName       string `json:"class_name"`       // 班级名称
 	ClassCode       string `json:"class_code"`       // 班级验证码
 	TeacherId       string `json:"teacher_id"`       // 教师ID
+	TeacherName     string `json:"teacher_name"`     // 教师姓名
 	SubjectId       string `json:"subject_id"`       // 科目ID
+	SubjectName     string `json:"subject_name"`     // 科目名称
+	Subject         string `json:"subject"`          // 科目名称（冗余字段，方便展示）
 	Semester        string `json:"semester"`         // 学期
 	MaxStudents     int32  `json:"max_students"`     // 学生人数上限
 	CurrentStudents int32  `json:"current_students"` // 当前学生人数
@@ -323,12 +354,13 @@ func (s *ClassServiceImpl) GetTeacherClasses(ctx context.Context, req *GetTeache
 	// 转换为响应格式
 	classInfos := make([]*ClassInfo, 0, len(classes))
 	for _, class := range classes {
-		classInfos = append(classInfos, &ClassInfo{
+		info := &ClassInfo{
 			ClassId:         class.ClassId,
 			ClassName:       class.ClassName,
 			ClassCode:       class.ClassCode,
 			TeacherId:       class.TeacherId,
 			SubjectId:       class.SubjectId,
+			Subject:         class.Subject,
 			Semester:        class.Semester,
 			MaxStudents:     class.MaxStudents,
 			CurrentStudents: class.CurrentStudents,
@@ -338,7 +370,18 @@ func (s *ClassServiceImpl) GetTeacherClasses(ctx context.Context, req *GetTeache
 			Status:          class.Status,
 			CreateTime:      class.CreateTime.Format("2006-01-02 15:04:05"),
 			UpdateTime:      class.UpdateTime.Format("2006-01-02 15:04:05"),
-		})
+		}
+		// 查询教师姓名
+		if teacher, err := s.teacherService.GetTeacherById(class.TeacherId); err == nil && teacher != nil {
+			info.TeacherName = teacher.TeacherName
+		}
+		// 查询科目名称（兼容旧数据）
+		if class.Subject != "" {
+			info.SubjectName = class.Subject
+		} else if subj, err := s.subjectService.GetSubjectById(class.SubjectId); err == nil && subj != nil {
+			info.SubjectName = subj.SubjectName
+		}
+		classInfos = append(classInfos, info)
 	}
 
 	return &GetTeacherClassesResponse{
@@ -438,6 +481,7 @@ func (s *ClassServiceImpl) GetClassByCode(ctx context.Context, req *GetClassByCo
 		ClassCode:       class.ClassCode,
 		TeacherId:       class.TeacherId,
 		SubjectId:       class.SubjectId,
+		Subject:         class.Subject,
 		Semester:        class.Semester,
 		MaxStudents:     class.MaxStudents,
 		CurrentStudents: class.CurrentStudents,
@@ -448,10 +492,95 @@ func (s *ClassServiceImpl) GetClassByCode(ctx context.Context, req *GetClassByCo
 		CreateTime:      class.CreateTime.Format("2006-01-02 15:04:05"),
 		UpdateTime:      class.UpdateTime.Format("2006-01-02 15:04:05"),
 	}
+	// 查询教师姓名
+	if teacher, err := s.teacherService.GetTeacherById(class.TeacherId); err == nil && teacher != nil {
+		classInfo.TeacherName = teacher.TeacherName
+	}
+	// 查询科目名称（兼容旧数据）
+	if class.Subject != "" {
+		classInfo.SubjectName = class.Subject
+	} else if subj, err := s.subjectService.GetSubjectById(class.SubjectId); err == nil && subj != nil {
+		classInfo.SubjectName = subj.SubjectName
+	}
 
 	return &GetClassByCodeResponse{
 		Code:    consts.SuccessCode,
 		Message: consts.MessageQuerySuccess,
 		Class:   classInfo,
+	}, nil
+}
+
+// ==================== 查询科目列表 ====================
+
+// ListSubjectsRequest 查询科目列表请求
+type ListSubjectsRequest struct{}
+
+// SubjectItem 科目简要信息
+type SubjectItem struct {
+	SubjectId   string `json:"subject_id"`
+	SubjectName string `json:"subject_name"`
+}
+
+// ListSubjectsResponse 查询科目列表响应
+type ListSubjectsResponse struct {
+	Code     int32          `json:"code"`
+	Message  string         `json:"message"`
+	Subjects []*SubjectItem `json:"subjects"`
+}
+
+// ListSubjects 查询全量启用科目列表（供创建班级时选择）
+func (s *ClassServiceImpl) ListSubjects(ctx context.Context) (*ListSubjectsResponse, error) {
+	subjectDAO := dao.NewSubjectDAO()
+	subjects, err := subjectDAO.ListSubjects("status = ?", []interface{}{1}, 1000, 0)
+	if err != nil {
+		return &ListSubjectsResponse{Code: errs.ErrInternal, Message: "查询科目列表失败"}, err
+	}
+	items := make([]*SubjectItem, 0, len(subjects))
+	for _, s := range subjects {
+		items = append(items, &SubjectItem{
+			SubjectId:   s.SubjectId,
+			SubjectName: s.SubjectName,
+		})
+	}
+	return &ListSubjectsResponse{
+		Code:     consts.SuccessCode,
+		Message:  consts.MessageQuerySuccess,
+		Subjects: items,
+	}, nil
+}
+
+// ==================== 查询学期列表 ====================
+
+// SemesterItem 学期简要信息
+type SemesterItem struct {
+	SemesterId   string `json:"semester_id"`
+	SemesterName string `json:"semester_name"`
+}
+
+// ListSemestersResponse 查询学期列表响应
+type ListSemestersResponse struct {
+	Code      int32           `json:"code"`
+	Message   string          `json:"message"`
+	Semesters []*SemesterItem `json:"semesters"`
+}
+
+// ListSemesters 查询全量启用学期列表（供创建班级时选择）
+func (s *ClassServiceImpl) ListSemesters(ctx context.Context) (*ListSemestersResponse, error) {
+	semesterDAO := dao.NewSemesterDAO()
+	semesters, err := semesterDAO.ListSemesters(1)
+	if err != nil {
+		return &ListSemestersResponse{Code: errs.ErrInternal, Message: "查询学期列表失败"}, err
+	}
+	items := make([]*SemesterItem, 0, len(semesters))
+	for _, sem := range semesters {
+		items = append(items, &SemesterItem{
+			SemesterId:   sem.SemesterId,
+			SemesterName: sem.SemesterName,
+		})
+	}
+	return &ListSemestersResponse{
+		Code:      consts.SuccessCode,
+		Message:   consts.MessageQuerySuccess,
+		Semesters: items,
 	}, nil
 }

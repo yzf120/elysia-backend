@@ -12,6 +12,7 @@ type Class struct {
 	ClassCode       string    `gorm:"column:class_code;type:varchar(32);uniqueIndex;not null" json:"class_code"`
 	TeacherId       string    `gorm:"column:teacher_id;type:varchar(64);not null;index:idx_teacher" json:"teacher_id"`
 	SubjectId       string    `gorm:"column:subject_id;type:varchar(64);not null;index:idx_subject" json:"subject_id"`
+	Subject         string    `gorm:"column:subject;type:varchar(128);not null" json:"subject"`
 	Semester        string    `gorm:"column:semester;type:varchar(32)" json:"semester"`
 	MaxStudents     int32     `gorm:"column:max_students;type:int;not null;default:100" json:"max_students"`
 	CurrentStudents int32     `gorm:"column:current_students;type:int;not null;default:0" json:"current_students"`
@@ -25,7 +26,7 @@ type Class struct {
 
 // TableName 指定表名
 func (Class) TableName() string {
-	return "classes"
+	return "class"
 }
 
 // ClassMember 班级成员关联数据模型

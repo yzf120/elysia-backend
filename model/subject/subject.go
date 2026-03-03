@@ -40,3 +40,23 @@ type TeacherSubject struct {
 func (TeacherSubject) TableName() string {
 	return "teacher_subjects"
 }
+
+// Semester 学期数据模型
+type Semester struct {
+	Id           int64     `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
+	SemesterId   string    `gorm:"column:semester_id;type:varchar(64);uniqueIndex;not null" json:"semester_id"`
+	SemesterName string    `gorm:"column:semester_name;type:varchar(64);not null" json:"semester_name"`
+	Year         int32     `gorm:"column:year;type:smallint;not null" json:"year"`
+	Term         int32     `gorm:"column:term;type:tinyint;not null" json:"term"` // 1-春季，2-秋季
+	StartDate    time.Time `gorm:"column:start_date;type:date;not null" json:"start_date"`
+	EndDate      time.Time `gorm:"column:end_date;type:date;not null" json:"end_date"`
+	Status       int32     `gorm:"column:status;type:tinyint;not null;default:1" json:"status"` // 1-启用，0-禁用
+	Remark       string    `gorm:"column:remark;type:varchar(256)" json:"remark"`
+	CreateTime   time.Time `gorm:"column:create_time;type:datetime;autoCreateTime" json:"create_time"`
+	UpdateTime   time.Time `gorm:"column:update_time;type:datetime;autoUpdateTime" json:"update_time"`
+}
+
+// TableName 指定表名
+func (Semester) TableName() string {
+	return "semesters"
+}

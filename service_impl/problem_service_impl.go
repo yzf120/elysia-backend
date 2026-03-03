@@ -47,7 +47,7 @@ func (s *ProblemServiceImpl) CreateProblem(ctx context.Context, request *req.Cre
 	}
 	return &rsp.CreateProblemResponse{
 		Code:    consts.SuccessCode,
-		Message: consts.MessageCreateUserSuccess,
+		Message: consts.MessageCreateProblemSuccess,
 		Id:      created.Id,
 	}, nil
 }
@@ -64,7 +64,7 @@ func (s *ProblemServiceImpl) GetProblem(ctx context.Context, request *req.GetPro
 	}
 	return &rsp.GetProblemResponse{
 		Code:    consts.SuccessCode,
-		Message: consts.MessageQuerySuccess,
+		Message: consts.MessageGetProblemSuccess,
 		Problem: &rsp.ProblemInfo{
 			Id:                  p.Id,
 			Title:               p.Title,
@@ -127,7 +127,7 @@ func (s *ProblemServiceImpl) UpdateProblem(ctx context.Context, request *req.Upd
 	}
 	return &rsp.UpdateProblemResponse{
 		Code:    consts.SuccessCode,
-		Message: consts.MessageUpdateSuccess,
+		Message: consts.MessageUpdateProblemSuccess,
 	}, nil
 }
 
@@ -143,6 +143,6 @@ func (s *ProblemServiceImpl) DeleteProblem(ctx context.Context, request *req.Del
 	}
 	return &rsp.DeleteProblemResponse{
 		Code:    consts.SuccessCode,
-		Message: consts.MessageDeleteSuccess,
+		Message: consts.MessageDeleteProblemSuccess,
 	}, nil
 }

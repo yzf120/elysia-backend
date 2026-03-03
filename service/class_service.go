@@ -8,6 +8,7 @@ import (
 	"github.com/yzf120/elysia-backend/dao"
 	"github.com/yzf120/elysia-backend/errs"
 	classModel "github.com/yzf120/elysia-backend/model/class"
+	subjectModel "github.com/yzf120/elysia-backend/model/subject"
 )
 
 // ClassService 班级服务
@@ -18,6 +19,7 @@ type ClassService struct {
 	studentDAO        dao.StudentDAO
 	subjectDAO        dao.SubjectDAO
 	teacherSubjectDAO dao.TeacherSubjectDAO
+	semesterDAO       dao.SemesterDAO
 }
 
 // NewClassService 创建班级服务
@@ -29,6 +31,7 @@ func NewClassService() *ClassService {
 		studentDAO:        dao.NewStudentDAO(),
 		subjectDAO:        dao.NewSubjectDAO(),
 		teacherSubjectDAO: dao.NewTeacherSubjectDAO(),
+		semesterDAO:       dao.NewSemesterDAO(),
 	}
 }
 
@@ -56,9 +59,28 @@ func (s *ClassService) CreateClass(teacherId, className, subjectId, semester, de
 		return nil, errs.NewCommonError(errs.ErrBadRequest, "科目不存在")
 	}
 
-	// 检查教师是否有权限教授该科目
+	// 查询学期信息（获取起止日期），semester 传的是学期名称如 "2026春"
+	semesterInfo, err := s.semesterDAO.GetSemesterByName(semester)
+	if err != nil || semesterInfo == nil {
+		return nil, errs.NewCommonError(errs.ErrBadRequest, "学期不存在或已禁用")
+	}
+
+	// 检查教师是否已有该科目关联，若无则自动创建
 	teacherSubject, err := s.teacherSubjectDAO.GetTeacherSubject(teacherId, subjectId)
-	if err != nil || teacherSubject == nil || teacherSubject.Status != 1 {
+	if err != nil || teacherSubject == nil {
+		// 不存在则新建关联记录
+		newTS := &subjectModel.TeacherSubject{
+			TeacherId: teacherId,
+			SubjectId: subjectId,
+			StartDate: semesterInfo.StartDate,
+			EndDate:   semesterInfo.EndDate,
+			Status:    1,
+			Remark:    semesterInfo.SemesterName,
+		}
+		if createErr := s.teacherSubjectDAO.CreateTeacherSubject(newTS); createErr != nil {
+			return nil, errs.NewCommonError(errs.ErrInternal, "写入教师科目关联失败: "+createErr.Error())
+		}
+	} else if teacherSubject.Status != 1 {
 		return nil, errs.NewCommonError(errs.ErrBadRequest, "教师未被分配该科目或科目状态异常")
 	}
 
@@ -73,6 +95,7 @@ func (s *ClassService) CreateClass(teacherId, className, subjectId, semester, de
 		ClassCode:       classCode,
 		TeacherId:       teacherId,
 		SubjectId:       subjectId,
+		Subject:         subject.SubjectName,
 		Semester:        semester,
 		MaxStudents:     maxStudents,
 		CurrentStudents: 0,
@@ -311,6 +334,18 @@ func (s *ClassService) UpdateClass(teacherId, classId string, updates map[string
 	}
 
 	return updatedClass, nil
+}
+
+// GetClassById 根据班级ID获取班级信息
+func (s *ClassService) GetClassById(classId string) (*classModel.Class, error) {
+	class, err := s.classDAO.GetClassById(classId)
+	if err != nil {
+		return nil, errs.NewCommonError(errs.ErrInternal, "查询班级失败: "+err.Error())
+	}
+	if class == nil {
+		return nil, errs.NewCommonError(errs.ErrBadRequest, "班级不存在")
+	}
+	return class, nil
 }
 
 // GetClassByCode 根据验证码获取班级信息

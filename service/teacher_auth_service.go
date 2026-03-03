@@ -58,18 +58,18 @@ func (s *TeacherAuthService) LoginWithSMS(ctx context.Context, phoneNumber, code
 	return teacherModel, token, nil
 }
 
-// LoginWithPassword 教师手机号+密码登录
-func (s *TeacherAuthService) LoginWithPassword(ctx context.Context, phoneNumber, password string) (*teacher.Teacher, string, error) {
+// LoginWithPassword 教师工号+密码登录
+func (s *TeacherAuthService) LoginWithPassword(ctx context.Context, employeeNumber, password string) (*teacher.Teacher, string, error) {
 	// 参数校验
-	if phoneNumber == "" {
-		return nil, "", errs.NewCommonError(errs.ErrBadRequest, "手机号不能为空")
+	if employeeNumber == "" {
+		return nil, "", errs.NewCommonError(errs.ErrBadRequest, "工号不能为空")
 	}
 	if password == "" {
 		return nil, "", errs.NewCommonError(errs.ErrBadRequest, "密码不能为空")
 	}
 
 	// 查询教师
-	teacherModel, err := s.teacherDAO.GetTeacherByPhoneNumber(phoneNumber)
+	teacherModel, err := s.teacherDAO.GetTeacherByEmployeeNumber(employeeNumber)
 	if err != nil {
 		return nil, "", errs.NewCommonError(errs.ErrInternal, "查询教师失败: "+err.Error())
 	}

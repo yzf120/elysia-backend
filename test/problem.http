@@ -1,0 +1,313 @@
+# =============================================
+# 题目管理 API - curl 测试用例
+# 使用方式：复制单条或多条 curl 命令，粘贴到 Apifox「导入 cURL」中批量导入
+# 注意：请将 eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk / eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJTVFUwMDEiLCJpc3MiOiJlbHlzaWEtYmFja2VuZCIsImV4cCI6MTc3MjUwODQ1NiwiaWF0IjoxNzcyNDIyMDU2fQ.XBmx2eD6HQ18u8Qmwe9pbjZL7mkCaoHTY9Qh6CS10qY 替换为实际登录后获取的 JWT token
+# =============================================
+
+
+# =============================================
+# 1. 创建题目（仅教师）POST /api/teacher/problem/create
+# =============================================
+
+# 1.1 创建题目 - 两数之和
+curl --request POST \
+  --url http://localhost:8001/api/teacher/problem/create \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "title": "两数之和",
+  "title_slug": "two-sum",
+  "difficulty": "简单",
+  "tags": "哈希表,数组",
+  "description": "给定一个整数数组 nums 和一个整数目标值 target，请你在该数组中找出和为目标值 target 的那两个整数，并返回它们的数组下标。\n你可以假设每种输入只会对应一个答案，并且你不能使用两次相同的元素。\n你可以按任意顺序返回答案。",
+  "explanation": "因为 nums[0] + nums[1] == 9，返回 [0, 1]。",
+  "hint": "可以尝试使用哈希表来降低时间复杂度",
+  "constraints": "2 <= nums.length <= 10^4\n-10^9 <= nums[i] <= 10^9\n-10^9 <= target <= 10^9\n只会存在一个有效答案",
+  "advanced_requirement": "进阶：你可以想出一个时间复杂度小于 O(n²) 的算法吗？",
+  "test_cases": "[{\"input\":\"4\\n2 7 11 15\\n9\",\"expected_output\":\"0 1\",\"is_sample\":1,\"explanation\":\"nums[0] + nums[1] = 2 + 7 = 9\"},{\"input\":\"3\\n3 2 4\\n6\",\"expected_output\":\"1 2\",\"is_sample\":1,\"explanation\":\"nums[1] + nums[2] = 2 + 4 = 6\"},{\"input\":\"2\\n3 3\\n6\",\"expected_output\":\"0 1\",\"is_sample\":1,\"explanation\":\"nums[0] + nums[1] = 3 + 3 = 6\"}]"
+}'
+
+# 1.2 创建题目 - 反转链表
+curl --request POST \
+  --url http://localhost:8001/api/teacher/problem/create \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "title": "反转链表",
+  "title_slug": "reverse-linked-list",
+  "difficulty": "简单",
+  "tags": "链表,递归",
+  "description": "给你单链表的头节点 head，请你反转链表，并返回反转后的链表。",
+  "explanation": "输入：head = [1,2,3,4,5]，输出：[5,4,3,2,1]",
+  "hint": "可以使用迭代或递归两种方式实现",
+  "constraints": "链表中节点的数目范围是 [0, 5000]\n-5000 <= Node.val <= 5000",
+  "advanced_requirement": "链表可以选用迭代或递归方式完成反转。你能否用两种方法解决这道题？",
+  "test_cases": "[{\"input\":\"5\\n1 2 3 4 5\",\"expected_output\":\"5 4 3 2 1\",\"is_sample\":1,\"explanation\":\"反转整个链表\"},{\"input\":\"2\\n1 2\",\"expected_output\":\"2 1\",\"is_sample\":1,\"explanation\":\"反转两个节点的链表\"},{\"input\":\"1\\n0\",\"expected_output\":\"0\",\"is_sample\":1,\"explanation\":\"单节点链表反转后不变\"}]"
+}'
+
+# 1.3 创建题目 - 最长公共子序列
+curl --request POST \
+  --url http://localhost:8001/api/teacher/problem/create \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "title": "最长公共子序列",
+  "title_slug": "longest-common-subsequence",
+  "difficulty": "中等",
+  "tags": "动态规划,字符串",
+  "description": "给定两个字符串 text1 和 text2，返回这两个字符串的最长公共子序列的长度。如果不存在公共子序列，返回 0。",
+  "explanation": "输入：text1 = \"abcde\", text2 = \"ace\"，输出：3，解释：最长公共子序列是 \"ace\"，它的长度为 3。",
+  "hint": "尝试使用动态规划，定义 dp[i][j] 为 text1[0..i-1] 和 text2[0..j-1] 的最长公共子序列长度",
+  "constraints": "1 <= text1.length, text2.length <= 1000\ntext1 和 text2 仅由小写英文字符组成",
+  "advanced_requirement": "",
+  "test_cases": "[{\"input\":\"abcde\\nace\",\"expected_output\":\"3\",\"is_sample\":1,\"explanation\":\"最长公共子序列是 ace\"},{\"input\":\"abc\\nabc\",\"expected_output\":\"3\",\"is_sample\":1,\"explanation\":\"两字符串相同\"},{\"input\":\"abc\\ndef\",\"expected_output\":\"0\",\"is_sample\":1,\"explanation\":\"无公共子序列\"}]"
+}'
+
+# 1.4 创建题目 - 缺少必填字段（测试错误处理）
+curl --request POST \
+  --url http://localhost:8001/api/teacher/problem/create \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "title": "缺少必填字段的题目",
+  "difficulty": "简单"
+}'
+
+# 1.5 创建题目 - 无 Token（测试鉴权拦截）
+curl --request POST \
+  --url http://localhost:8001/api/teacher/problem/create \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "title": "无权限测试",
+  "title_slug": "no-auth-test",
+  "difficulty": "简单",
+  "tags": "测试",
+  "description": "测试无 token 时的响应",
+  "test_cases": "[]"
+}'
+
+
+# =============================================
+# 2. 查询题目（学生和教师均可）GET /api/problem/get
+# =============================================
+
+# 2.1 查询题目 - 教师 token 查询 id=1
+curl --request GET \
+  --url 'http://localhost:8001/api/problem/get?id=1' \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk'
+
+# 2.2 查询题目 - 学生 token 查询 id=1
+curl --request GET \
+  --url 'http://localhost:8001/api/problem/get?id=1' \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJTVFUwMDEiLCJpc3MiOiJlbHlzaWEtYmFja2VuZCIsImV4cCI6MTc3MjUwODQ1NiwiaWF0IjoxNzcyNDIyMDU2fQ.XBmx2eD6HQ18u8Qmwe9pbjZL7mkCaoHTY9Qh6CS10qY'
+
+# 2.3 查询题目 - id=2
+curl --request GET \
+  --url 'http://localhost:8001/api/problem/get?id=2' \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk'
+
+# 2.4 查询题目 - id=3
+curl --request GET \
+  --url 'http://localhost:8001/api/problem/get?id=3' \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk'
+
+# 2.5 查询题目 - 不存在的 id（测试错误处理）
+curl --request GET \
+  --url 'http://localhost:8001/api/problem/get?id=99999' \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk'
+
+# 2.6 查询题目 - 无效的 id 参数（测试错误处理）
+curl --request GET \
+  --url 'http://localhost:8001/api/problem/get?id=abc' \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk'
+
+# 2.7 查询题目 - 缺少 id 参数（测试错误处理）
+curl --request GET \
+  --url 'http://localhost:8001/api/problem/get' \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk'
+
+# 2.8 查询题目 - 无 Token（测试鉴权拦截）
+curl --request GET \
+  --url 'http://localhost:8001/api/problem/get?id=1' \
+  --header 'Content-Type: application/json'
+
+
+# =============================================
+# 3. 更新题目（仅教师）POST /api/teacher/problem/update
+# =============================================
+
+# 3.1 更新题目 - 修改标题和难度
+curl --request POST \
+  --url http://localhost:8001/api/teacher/problem/update \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "id": 1,
+  "title": "两数之和（更新版）",
+  "difficulty": "中等"
+}'
+
+# 3.2 更新题目 - 修改描述
+curl --request POST \
+  --url http://localhost:8001/api/teacher/problem/update \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "id": 1,
+  "description": "给定一个整数数组 nums 和一个整数目标值 target，请你在该数组中找出和为目标值 target 的那两个整数，并返回它们的数组下标。（已更新描述）"
+}'
+
+# 3.3 更新题目 - 修改标签
+curl --request POST \
+  --url http://localhost:8001/api/teacher/problem/update \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "id": 1,
+  "tags": "哈希表,数组,双指针"
+}'
+
+# 3.4 更新题目 - 修改测试用例
+curl --request POST \
+  --url http://localhost:8001/api/teacher/problem/update \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "id": 1,
+  "test_cases": "[{\"input\":\"4\\n2 7 11 15\\n9\",\"expected_output\":\"0 1\",\"is_sample\":1,\"explanation\":\"更新后的测试用例\"},{\"input\":\"3\\n3 2 4\\n6\",\"expected_output\":\"1 2\",\"is_sample\":0,\"explanation\":\"隐藏测试用例\"}]"
+}'
+
+# 3.5 更新题目 - 修改提示和进阶要求
+curl --request POST \
+  --url http://localhost:8001/api/teacher/problem/update \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "id": 2,
+  "hint": "迭代方式：使用三个指针 prev、curr、next 逐步反转",
+  "advanced_requirement": "尝试用 O(1) 额外空间完成迭代，以及 O(n) 栈空间完成递归"
+}'
+
+# 3.6 更新题目 - 不存在的 id（测试错误处理）
+curl --request POST \
+  --url http://localhost:8001/api/teacher/problem/update \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "id": 99999,
+  "title": "不存在的题目"
+}'
+
+# 3.7 更新题目 - 无 Token（测试鉴权拦截）
+curl --request POST \
+  --url http://localhost:8001/api/teacher/problem/update \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "id": 1,
+  "title": "无权限更新"
+}'
+
+
+# =============================================
+# 4. 删除题目（仅教师）POST /api/teacher/problem/delete
+# =============================================
+
+# 4.1 删除题目 - 删除 id=3（最长公共子序列）
+curl --request POST \
+  --url http://localhost:8001/api/teacher/problem/delete \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "id": 3
+}'
+
+# 4.2 删除题目 - 不存在的 id（测试错误处理）
+curl --request POST \
+  --url http://localhost:8001/api/teacher/problem/delete \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "id": 99999
+}'
+
+# 4.3 删除题目 - 缺少 id 字段（测试错误处理）
+curl --request POST \
+  --url http://localhost:8001/api/teacher/problem/delete \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{}'
+
+# 4.4 删除题目 - 无 Token（测试鉴权拦截）
+curl --request POST \
+  --url http://localhost:8001/api/teacher/problem/delete \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "id": 1
+}'
+
+
+# =============================================
+# 5. 完整流程测试（创建 → 查询 → 更新 → 查询验证 → 删除）
+# =============================================
+
+# 5.1 步骤1: 创建新题目
+curl --request POST \
+  --url http://localhost:8001/api/teacher/problem/create \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "title": "流程测试题目",
+  "title_slug": "flow-test-problem",
+  "difficulty": "简单",
+  "tags": "测试",
+  "description": "这是一道用于完整流程测试的题目",
+  "hint": "这是提示",
+  "constraints": "1 <= n <= 100",
+  "test_cases": "[{\"input\":\"1\",\"expected_output\":\"1\",\"is_sample\":1,\"explanation\":\"测试用例\"}]"
+}'
+
+# 5.2 步骤2: 查询刚创建的题目（替换 id 为步骤1返回的 id）
+curl --request GET \
+  --url 'http://localhost:8001/api/problem/get?id=4' \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk'
+
+# 5.3 步骤3: 更新题目信息
+curl --request POST \
+  --url http://localhost:8001/api/teacher/problem/update \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "id": 4,
+  "title": "流程测试题目（已更新）",
+  "difficulty": "中等",
+  "description": "这是更新后的题目描述"
+}'
+
+# 5.4 步骤4: 再次查询验证更新结果
+curl --request GET \
+  --url 'http://localhost:8001/api/problem/get?id=4' \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk'
+
+# 5.5 步骤5: 删除题目
+curl --request POST \
+  --url http://localhost:8001/api/teacher/problem/delete \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "id": 4
+}'
+
+# 5.6 步骤6: 验证题目已删除（应返回题目不存在）
+curl --request GET \
+  --url 'http://localhost:8001/api/problem/get?id=4' \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk'

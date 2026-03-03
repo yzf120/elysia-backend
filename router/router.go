@@ -24,6 +24,8 @@ func Init() {
 	teacherAuthService = service.NewTeacherAuthService()
 	smsService = service.NewSMSService()
 	problemService = service_impl.NewProblemServiceImpl()
+	classService = service_impl.NewClassServiceImpl()
+	codeRunService = service_impl.NewCodeRunServiceImpl()
 }
 
 func RegisterRouter(router *mux.Router) {
@@ -64,6 +66,12 @@ func registerApiRouters(publicRouter *mux.Router, protectedRouter *mux.Router) {
 
 	// 题目相关接口（增删改仅教师，查询学生和教师均可）
 	registerProblem(publicRouter, protectedRouter)
+
+	// 班级相关接口（增删改仅教师，查询学生和教师均可）
+	registerClass(publicRouter, protectedRouter)
+
+	// 代码运行相关接口（学生端）
+	registerCodeRun(protectedRouter)
 
 }
 

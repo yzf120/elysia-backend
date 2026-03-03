@@ -1,0 +1,360 @@
+# =============================================
+# 班级管理 API - curl 测试用例
+# 使用方式：复制单条或多条 curl 命令，粘贴到 Apifox「导入 cURL」中批量导入
+# 注意：请将 TOKEN_TEACHER / TOKEN_STUDENT 替换为实际登录后获取的 JWT token
+# 教师 token 示例：eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk
+# =============================================
+
+
+# =============================================
+# 1. 创建班级（仅教师）POST /api/teacher/class/create
+# =============================================
+
+# 1.1 创建班级 - 正常创建
+curl --request POST \
+  --url http://localhost:8001/api/teacher/class/create \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "teacher_id": "tea_TCH001",
+  "class_name": "2024春季高等数学A班",
+  "subject_id": "sub_001",
+  "semester": "2024春季",
+  "description": "本班为高等数学A班，适合理工科学生",
+  "max_students": 50
+}'
+
+# 1.2 创建班级 - 缺少必填字段（测试错误处理）
+curl --request POST \
+  --url http://localhost:8001/api/teacher/class/create \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "teacher_id": "tea_TCH001",
+  "class_name": "缺少科目的班级"
+}'
+
+# 1.3 创建班级 - 无 Token（测试鉴权拦截）
+curl --request POST \
+  --url http://localhost:8001/api/teacher/class/create \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "teacher_id": "tea_TCH001",
+  "class_name": "无权限测试班级",
+  "subject_id": "sub_001",
+  "semester": "2024春季",
+  "max_students": 30
+}'
+
+
+# =============================================
+# 2. 更新班级信息（仅教师）POST /api/teacher/class/update
+# =============================================
+
+# 2.1 更新班级 - 修改班级名称和描述（替换 class_id 为实际创建后返回的 ID）
+curl --request POST \
+  --url http://localhost:8001/api/teacher/class/update \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "teacher_id": "tea_TCH001",
+  "class_id": "cls_123456789",
+  "class_name": "2024春季高等数学A班（已更新）",
+  "description": "更新后的班级描述"
+}'
+
+# 2.2 更新班级 - 修改公告
+curl --request POST \
+  --url http://localhost:8001/api/teacher/class/update \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "teacher_id": "tea_TCH001",
+  "class_id": "cls_123456789",
+  "announcement": "本周五下午3点进行期中考试，请同学们做好准备"
+}'
+
+# 2.3 更新班级 - 修改人数上限
+curl --request POST \
+  --url http://localhost:8001/api/teacher/class/update \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "teacher_id": "tea_TCH001",
+  "class_id": "cls_123456789",
+  "max_students": 60
+}'
+
+# 2.4 更新班级 - 无权限（非班级创建者）
+curl --request POST \
+  --url http://localhost:8001/api/teacher/class/update \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "teacher_id": "tea_OTHER001",
+  "class_id": "cls_123456789",
+  "class_name": "无权限修改"
+}'
+
+
+# =============================================
+# 3. 教师移除学生（仅教师）POST /api/teacher/class/remove-student
+# =============================================
+
+# 3.1 移除学生 - 正常移除
+curl --request POST \
+  --url http://localhost:8001/api/teacher/class/remove-student \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "teacher_id": "tea_TCH001",
+  "class_id": "cls_123456789",
+  "student_id": "stu_STU001"
+}'
+
+# 3.2 移除学生 - 无 Token（测试鉴权拦截）
+curl --request POST \
+  --url http://localhost:8001/api/teacher/class/remove-student \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "teacher_id": "tea_TCH001",
+  "class_id": "cls_123456789",
+  "student_id": "stu_STU001"
+}'
+
+
+# =============================================
+# 4. 根据验证码查询班级（师生共用）GET /api/class/get-by-code
+# =============================================
+
+# 4.1 查询班级 - 教师 token 查询（替换 class_code 为实际创建后返回的验证码）
+curl --request GET \
+  --url 'http://localhost:8001/api/class/get-by-code?class_code=ABC123' \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk'
+
+# 4.2 查询班级 - 学生 token 查询
+curl --request GET \
+  --url 'http://localhost:8001/api/class/get-by-code?class_code=ABC123' \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJTVFUwMDEiLCJpc3MiOiJlbHlzaWEtYmFja2VuZCIsImV4cCI6MTc3MjUwODQ1NiwiaWF0IjoxNzcyNDIyMDU2fQ.XBmx2eD6HQ18u8Qmwe9pbjZL7mkCaoHTY9Qh6CS10qY'
+
+# 4.3 查询班级 - 不存在的验证码（测试错误处理）
+curl --request GET \
+  --url 'http://localhost:8001/api/class/get-by-code?class_code=XXXXXX' \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk'
+
+# 4.4 查询班级 - 缺少 class_code 参数（测试错误处理）
+curl --request GET \
+  --url 'http://localhost:8001/api/class/get-by-code' \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk'
+
+
+# =============================================
+# 5. 获取班级成员列表（师生共用）POST /api/class/members
+# =============================================
+
+# 5.1 获取班级成员 - 第1页
+curl --request POST \
+  --url http://localhost:8001/api/class/members \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "class_id": "cls_123456789",
+  "page": 1,
+  "page_size": 20
+}'
+
+# 5.2 获取班级成员 - 学生 token 查询
+curl --request POST \
+  --url http://localhost:8001/api/class/members \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJTVFUwMDEiLCJpc3MiOiJlbHlzaWEtYmFja2VuZCIsImV4cCI6MTc3MjUwODQ1NiwiaWF0IjoxNzcyNDIyMDU2fQ.XBmx2eD6HQ18u8Qmwe9pbjZL7mkCaoHTY9Qh6CS10qY' \
+  --data '{
+  "class_id": "cls_123456789",
+  "page": 1,
+  "page_size": 20
+}'
+
+
+# =============================================
+# 6. 获取教师班级列表（师生共用）POST /api/class/teacher-classes
+# =============================================
+
+# 6.1 获取教师班级列表 - 教师 token
+curl --request POST \
+  --url http://localhost:8001/api/class/teacher-classes \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "teacher_id": "tea_TCH001",
+  "page": 1,
+  "page_size": 20
+}'
+
+# 6.2 获取教师班级列表 - 学生 token 查询（查看某教师的班级）
+curl --request POST \
+  --url http://localhost:8001/api/class/teacher-classes \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJTVFUwMDEiLCJpc3MiOiJlbHlzaWEtYmFja2VuZCIsImV4cCI6MTc3MjUwODQ1NiwiaWF0IjoxNzcyNDIyMDU2fQ.XBmx2eD6HQ18u8Qmwe9pbjZL7mkCaoHTY9Qh6CS10qY' \
+  --data '{
+  "teacher_id": "tea_TCH001",
+  "page": 1,
+  "page_size": 20
+}'
+
+
+# =============================================
+# 7. 获取学生班级列表（师生共用）POST /api/class/student-classes
+# =============================================
+
+# 7.1 获取学生班级列表 - 学生 token
+curl --request POST \
+  --url http://localhost:8001/api/class/student-classes \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJTVFUwMDEiLCJpc3MiOiJlbHlzaWEtYmFja2VuZCIsImV4cCI6MTc3MjUwODQ1NiwiaWF0IjoxNzcyNDIyMDU2fQ.XBmx2eD6HQ18u8Qmwe9pbjZL7mkCaoHTY9Qh6CS10qY' \
+  --data '{
+  "student_id": "stu_STU001",
+  "page": 1,
+  "page_size": 20
+}'
+
+# 7.2 获取学生班级列表 - 教师 token 查询（查看某学生的班级）
+curl --request POST \
+  --url http://localhost:8001/api/class/student-classes \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "student_id": "stu_STU001",
+  "page": 1,
+  "page_size": 20
+}'
+
+
+# =============================================
+# 8. 学生加入班级 POST /api/student/class/join
+# =============================================
+
+# 8.1 加入班级 - 正常加入（替换 class_code 为实际验证码）
+curl --request POST \
+  --url http://localhost:8001/api/student/class/join \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJTVFUwMDEiLCJpc3MiOiJlbHlzaWEtYmFja2VuZCIsImV4cCI6MTc3MjUwODQ1NiwiaWF0IjoxNzcyNDIyMDU2fQ.XBmx2eD6HQ18u8Qmwe9pbjZL7mkCaoHTY9Qh6CS10qY' \
+  --data '{
+  "student_id": "stu_STU001",
+  "class_code": "ABC123"
+}'
+
+# 8.2 加入班级 - 验证码错误（测试错误处理）
+curl --request POST \
+  --url http://localhost:8001/api/student/class/join \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJTVFUwMDEiLCJpc3MiOiJlbHlzaWEtYmFja2VuZCIsImV4cCI6MTc3MjUwODQ1NiwiaWF0IjoxNzcyNDIyMDU2fQ.XBmx2eD6HQ18u8Qmwe9pbjZL7mkCaoHTY9Qh6CS10qY' \
+  --data '{
+  "student_id": "stu_STU001",
+  "class_code": "WRONG1"
+}'
+
+# 8.3 加入班级 - 无 Token（测试鉴权拦截）
+curl --request POST \
+  --url http://localhost:8001/api/student/class/join \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "student_id": "stu_STU001",
+  "class_code": "ABC123"
+}'
+
+
+# =============================================
+# 9. 学生退出班级 POST /api/student/class/leave
+# =============================================
+
+# 9.1 退出班级 - 正常退出
+curl --request POST \
+  --url http://localhost:8001/api/student/class/leave \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJTVFUwMDEiLCJpc3MiOiJlbHlzaWEtYmFja2VuZCIsImV4cCI6MTc3MjUwODQ1NiwiaWF0IjoxNzcyNDIyMDU2fQ.XBmx2eD6HQ18u8Qmwe9pbjZL7mkCaoHTY9Qh6CS10qY' \
+  --data '{
+  "student_id": "stu_STU001",
+  "class_id": "cls_123456789"
+}'
+
+# 9.2 退出班级 - 未加入的班级（测试错误处理）
+curl --request POST \
+  --url http://localhost:8001/api/student/class/leave \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJTVFUwMDEiLCJpc3MiOiJlbHlzaWEtYmFja2VuZCIsImV4cCI6MTc3MjUwODQ1NiwiaWF0IjoxNzcyNDIyMDU2fQ.XBmx2eD6HQ18u8Qmwe9pbjZL7mkCaoHTY9Qh6CS10qY' \
+  --data '{
+  "student_id": "stu_STU001",
+  "class_id": "cls_not_exist"
+}'
+
+
+# =============================================
+# 10. 完整流程测试（创建 → 查询 → 加入 → 获取成员 → 移除 → 退出 → 更新）
+# =============================================
+
+# 10.1 步骤1: 教师创建班级
+curl --request POST \
+  --url http://localhost:8001/api/teacher/class/create \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "teacher_id": "tea_TCH001",
+  "class_name": "流程测试班级",
+  "subject_id": "sub_001",
+  "semester": "2024春季",
+  "description": "用于完整流程测试的班级",
+  "max_students": 30
+}'
+
+# 10.2 步骤2: 根据验证码查询班级（替换 class_code 为步骤1返回的 class_code）
+curl --request GET \
+  --url 'http://localhost:8001/api/class/get-by-code?class_code=REPLACE_ME' \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJTVFUwMDEiLCJpc3MiOiJlbHlzaWEtYmFja2VuZCIsImV4cCI6MTc3MjUwODQ1NiwiaWF0IjoxNzcyNDIyMDU2fQ.XBmx2eD6HQ18u8Qmwe9pbjZL7mkCaoHTY9Qh6CS10qY'
+
+# 10.3 步骤3: 学生加入班级（替换 class_code 为步骤1返回的 class_code）
+curl --request POST \
+  --url http://localhost:8001/api/student/class/join \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJTVFUwMDEiLCJpc3MiOiJlbHlzaWEtYmFja2VuZCIsImV4cCI6MTc3MjUwODQ1NiwiaWF0IjoxNzcyNDIyMDU2fQ.XBmx2eD6HQ18u8Qmwe9pbjZL7mkCaoHTY9Qh6CS10qY' \
+  --data '{
+  "student_id": "stu_STU001",
+  "class_code": "REPLACE_ME"
+}'
+
+# 10.4 步骤4: 获取班级成员列表（替换 class_id 为步骤1返回的 class_id）
+curl --request POST \
+  --url http://localhost:8001/api/class/members \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "class_id": "REPLACE_ME",
+  "page": 1,
+  "page_size": 20
+}'
+
+# 10.5 步骤5: 教师更新班级公告（替换 class_id 为步骤1返回的 class_id）
+curl --request POST \
+  --url http://localhost:8001/api/teacher/class/update \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "teacher_id": "tea_TCH001",
+  "class_id": "REPLACE_ME",
+  "announcement": "流程测试：公告已更新"
+}'
+
+# 10.6 步骤6: 获取教师班级列表，验证班级存在
+curl --request POST \
+  --url http://localhost:8001/api/class/teacher-classes \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZWFfVENIMDAxIiwiaXNzIjoiZWx5c2lhLWJhY2tlbmQiLCJleHAiOjE3NzI1MDk4OTMsImlhdCI6MTc3MjQyMzQ5M30.0few6lF3D5o27EqOq818jPiheeCVghzBxmV5v0RaEIk' \
+  --data '{
+  "teacher_id": "tea_TCH001",
+  "page": 1,
+  "page_size": 20
+}'

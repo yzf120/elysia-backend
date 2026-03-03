@@ -55,3 +55,6 @@ INSERT INTO `teachers` (`teacher_id`, `phone_number`, `password`, `teacher_name`
 
 -- 更多正常教师
 ('TCH010', '13800001010', '$2a$10$rGJlZjjsJwJmnP77pdHf0.FQ/38UhDF0oErnOW1NtM1PnBrjA8a0u', '郑雪', 'T2024010', 'zhengxue@school.edu.cn', 2, 'https://example.com/avatar/teacher10.jpg', '["心理学基础", "发展心理学"]', 9, '心理系', '副教授', 1, '2024-01-21 13:40:00', 'ADMIN001', '资质审核通过', 1, '2024-01-17 10:15:00', '2024-01-21 13:40:00');
+
+
+UPDATE teachers SET teacher_id = CONCAT('tea_', teacher_id) WHERE teacher_id NOT LIKE 'tea_%';
