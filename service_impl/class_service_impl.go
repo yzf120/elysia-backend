@@ -14,6 +14,7 @@ type ClassServiceImpl struct {
 	classService   *service.ClassService
 	teacherService *service.TeacherService
 	subjectService service.SubjectService
+	studentDAO     dao.StudentDAO
 }
 
 // NewClassServiceImpl 创建班级服务实现
@@ -22,6 +23,7 @@ func NewClassServiceImpl() *ClassServiceImpl {
 		classService:   service.NewClassService(),
 		teacherService: service.NewTeacherService(),
 		subjectService: service.NewSubjectService(),
+		studentDAO:     dao.NewStudentDAO(),
 	}
 }
 
@@ -170,13 +172,16 @@ type GetClassMembersRequest struct {
 
 // ClassMemberInfo 班级成员信息
 type ClassMemberInfo struct {
-	ClassId    string `json:"class_id"`    // 班级ID
-	StudentId  string `json:"student_id"`  // 学生ID
-	JoinTime   string `json:"join_time"`   // 加入时间
-	Status     int32  `json:"status"`      // 状态
-	Remark     string `json:"remark"`      // 备注
-	CreateTime string `json:"create_time"` // 创建时间
-	UpdateTime string `json:"update_time"` // 更新时间
+	ClassId       string `json:"class_id"`       // 班级ID
+	StudentId     string `json:"student_id"`     // 学生ID
+	StudentName   string `json:"student_name"`   // 学生姓名
+	StudentNumber string `json:"student_number"` // 学号
+	Email         string `json:"email"`          // 邮箱
+	JoinTime      string `json:"join_time"`      // 加入时间
+	Status        int32  `json:"status"`         // 状态
+	Remark        string `json:"remark"`         // 备注
+	CreateTime    string `json:"create_time"`    // 创建时间
+	UpdateTime    string `json:"update_time"`    // 更新时间
 }
 
 // GetClassMembersResponse 获取班级成员列表响应
@@ -201,10 +206,10 @@ func (s *ClassServiceImpl) GetClassMembers(ctx context.Context, req *GetClassMem
 		}, nil
 	}
 
-	// 转换为响应格式
+	// 转换为响应格式，并查询学生详情
 	memberInfos := make([]*ClassMemberInfo, 0, len(members))
 	for _, member := range members {
-		memberInfos = append(memberInfos, &ClassMemberInfo{
+		info := &ClassMemberInfo{
 			ClassId:    member.ClassId,
 			StudentId:  member.StudentId,
 			JoinTime:   member.JoinTime.Format("2006-01-02 15:04:05"),
@@ -212,7 +217,14 @@ func (s *ClassServiceImpl) GetClassMembers(ctx context.Context, req *GetClassMem
 			Remark:     member.Remark,
 			CreateTime: member.CreateTime.Format("2006-01-02 15:04:05"),
 			UpdateTime: member.UpdateTime.Format("2006-01-02 15:04:05"),
-		})
+		}
+		// 查询学生详情（姓名、学号、邮箱）
+		if student, err := s.studentDAO.GetStudentById(member.StudentId); err == nil && student != nil {
+			info.StudentName = student.StudentName
+			info.StudentNumber = student.StudentNumber
+			info.Email = student.Email
+		}
+		memberInfos = append(memberInfos, info)
 	}
 
 	return &GetClassMembersResponse{

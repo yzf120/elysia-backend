@@ -43,5 +43,5 @@ type ClassMember struct {
 
 // TableName 指定表名
 func (ClassMember) TableName() string {
-	return "class_members"
+	return "class_member"
 }
