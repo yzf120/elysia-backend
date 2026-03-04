@@ -70,3 +70,18 @@ func (s *ProblemService) DeleteProblem(id int64) error {
 	}
 	return nil
 }
+
+// ListProblems 分页查询题库列表
+func (s *ProblemService) ListProblems(keyword, difficulty string, page, pageSize int) ([]*problem.Problem, int64, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 || pageSize > 100 {
+		pageSize = 20
+	}
+	problems, total, err := s.problemDAO.ListProblems(keyword, difficulty, page, pageSize)
+	if err != nil {
+		return nil, 0, errs.NewCommonError(errs.ErrInternal, "查询题库列表失败: "+err.Error())
+	}
+	return problems, total, nil
+}

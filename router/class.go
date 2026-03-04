@@ -31,6 +31,11 @@ func registerClass(publicRouter *mux.Router, protectedRouter *mux.Router) {
 	// 学生操作：加入/退出班级
 	protectedRouter.HandleFunc("/student/class/join", joinClassHandler).Methods("POST")
 	protectedRouter.HandleFunc("/student/class/leave", leaveClassHandler).Methods("POST")
+
+	// 公告：教师发布/删除（仅教师），师生均可查询
+	protectedRouter.HandleFunc("/teacher/class/announcement/publish", publishAnnouncementHandler).Methods("POST")
+	protectedRouter.HandleFunc("/teacher/class/announcement/delete", deleteAnnouncementHandler).Methods("POST")
+	protectedRouter.HandleFunc("/class/announcements", getAnnouncementsHandler).Methods("POST")
 }
 
 // listSubjectsHandler 查询全量启用科目列表
@@ -411,4 +416,76 @@ func leaveClassHandler(w http.ResponseWriter, r *http.Request) {
 	respBytes, _ := json.Marshal(resp)
 	w.WriteHeader(http.StatusOK)
 	w.Write(respBytes)
+}
+
+// publishAnnouncementHandler 教师发布公告
+func publishAnnouncementHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	setResponseHeaders(w)
+	req := &service_impl.PublishAnnouncementRequest{}
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	resp, err := classService.PublishAnnouncement(ctx, req)
+	if err != nil {
+		writeErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if resp.Code != 0 {
+		errResp := &errs.BaseResponse{Data: nil, Error: errs.NewError(int(resp.Code), resp.Message)}
+		respBytes, _ := json.Marshal(errResp)
+		w.WriteHeader(http.StatusOK)
+		w.Write(respBytes)
+		return
+	}
+	writeSuccessResponse(w, resp)
+}
+
+// deleteAnnouncementHandler 教师删除公告
+func deleteAnnouncementHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	setResponseHeaders(w)
+	req := &service_impl.DeleteAnnouncementRequest{}
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	resp, err := classService.DeleteAnnouncement(ctx, req)
+	if err != nil {
+		writeErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if resp.Code != 0 {
+		errResp := &errs.BaseResponse{Data: nil, Error: errs.NewError(int(resp.Code), resp.Message)}
+		respBytes, _ := json.Marshal(errResp)
+		w.WriteHeader(http.StatusOK)
+		w.Write(respBytes)
+		return
+	}
+	writeSuccessResponse(w, resp)
+}
+
+// getAnnouncementsHandler 查询班级公告列表（师生共用）
+func getAnnouncementsHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	setResponseHeaders(w)
+	req := &service_impl.GetAnnouncementsRequest{}
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	resp, err := classService.GetAnnouncements(ctx, req)
+	if err != nil {
+		writeErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if resp.Code != 0 {
+		errResp := &errs.BaseResponse{Data: nil, Error: errs.NewError(int(resp.Code), resp.Message)}
+		respBytes, _ := json.Marshal(errResp)
+		w.WriteHeader(http.StatusOK)
+		w.Write(respBytes)
+		return
+	}
+	writeSuccessResponse(w, resp)
 }

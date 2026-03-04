@@ -146,3 +146,31 @@ func (s *ProblemServiceImpl) DeleteProblem(ctx context.Context, request *req.Del
 		Message: consts.MessageDeleteProblemSuccess,
 	}, nil
 }
+
+// ListProblems 查询题库列表
+func (s *ProblemServiceImpl) ListProblems(ctx context.Context, request *req.ListProblemsRequest) (*rsp.ListProblemsResponse, error) {
+	problems, total, err := s.problemService.ListProblems(request.Keyword, request.Difficulty, request.Page, request.PageSize)
+	if err != nil {
+		code, msg := errs.ParseCommonError(err.Error())
+		return &rsp.ListProblemsResponse{
+			Code:    int32(code),
+			Message: msg,
+		}, nil
+	}
+	briefs := make([]*rsp.ProblemBriefInfo, 0, len(problems))
+	for _, p := range problems {
+		briefs = append(briefs, &rsp.ProblemBriefInfo{
+			Id:         p.Id,
+			Title:      p.Title,
+			TitleSlug:  p.TitleSlug,
+			Difficulty: p.Difficulty,
+			Tags:       p.Tags,
+		})
+	}
+	return &rsp.ListProblemsResponse{
+		Code:     consts.SuccessCode,
+		Message:  consts.MessageListProblemsSuccess,
+		Total:    total,
+		Problems: briefs,
+	}, nil
+}

@@ -24,6 +24,7 @@ func registerProblem(publicRouter *mux.Router, protectedRouter *mux.Router) {
 
 	// 查询：学生和教师均可调用（受保护路由，通用路由前缀）
 	protectedRouter.HandleFunc("/problem/get", getProblemHandler).Methods("GET")
+	protectedRouter.HandleFunc("/problem/list", listProblemsHandler).Methods("GET")
 }
 
 // createProblemHandler 创建题目处理器
@@ -160,6 +161,52 @@ func getProblemHandler(w http.ResponseWriter, r *http.Request) {
 
 	request := &problemReq.GetProblemRequest{Id: id}
 	resp, err := problemService.GetProblem(ctx, request)
+	if err != nil {
+		errResp := &errs.BaseResponse{
+			Data:  nil,
+			Error: errs.NewError(int(resp.Code), resp.Message),
+		}
+		respBytes, _ := json.Marshal(errResp)
+		w.WriteHeader(int(resp.Code))
+		w.Write(respBytes)
+		return
+	}
+
+	respBytes, _ := json.Marshal(resp)
+	w.WriteHeader(http.StatusOK)
+	w.Write(respBytes)
+}
+
+// listProblemsHandler 查询题库列表处理器（支持关键词搜索和难度筛选）
+func listProblemsHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	keyword := r.URL.Query().Get("keyword")
+	difficulty := r.URL.Query().Get("difficulty")
+	pageStr := r.URL.Query().Get("page")
+	pageSizeStr := r.URL.Query().Get("page_size")
+
+	page, _ := strconv.Atoi(pageStr)
+	if page <= 0 {
+		page = 1
+	}
+	pageSize, _ := strconv.Atoi(pageSizeStr)
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+
+	request := &problemReq.ListProblemsRequest{
+		Keyword:    keyword,
+		Difficulty: difficulty,
+		Page:       page,
+		PageSize:   pageSize,
+	}
+
+	resp, err := problemService.ListProblems(ctx, request)
 	if err != nil {
 		errResp := &errs.BaseResponse{
 			Data:  nil,

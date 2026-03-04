@@ -25,3 +25,20 @@ type GetProblemResponse struct {
 	Message string       `json:"message"`
 	Problem *ProblemInfo `json:"problem"`
 }
+
+// ProblemBriefInfo 题目简要信息（用于列表展示）
+type ProblemBriefInfo struct {
+	Id         int64  `json:"id"`
+	Title      string `json:"title"`
+	TitleSlug  string `json:"title_slug"`
+	Difficulty string `json:"difficulty"`
+	Tags       string `json:"tags"`
+}
+
+// ListProblemsResponse 题库列表响应
+type ListProblemsResponse struct {
+	Code     int32               `json:"code"`
+	Message  string              `json:"message"`
+	Total    int64               `json:"total"`
+	Problems []*ProblemBriefInfo `json:"problems"`
+}

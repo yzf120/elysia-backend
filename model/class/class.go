@@ -19,6 +19,7 @@ type Class struct {
 	Description     string    `gorm:"column:description;type:text" json:"description"`
 	Announcement    string    `gorm:"column:announcement;type:text" json:"announcement"`
 	QrCodeUrl       string    `gorm:"column:qr_code_url;type:varchar(512)" json:"qr_code_url"`
+	ChapterIds      string    `gorm:"column:chapter_ids;type:json" json:"chapter_ids"` // 章节id列表（有序JSON数组）
 	Status          int32     `gorm:"column:status;type:tinyint;not null;default:1" json:"status"`
 	CreateTime      time.Time `gorm:"column:create_time;type:datetime;autoCreateTime" json:"create_time"`
 	UpdateTime      time.Time `gorm:"column:update_time;type:datetime;autoUpdateTime" json:"update_time"`

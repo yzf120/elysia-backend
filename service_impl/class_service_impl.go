@@ -2,6 +2,9 @@ package service_impl
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"time"
 
 	"github.com/yzf120/elysia-backend/consts"
 	"github.com/yzf120/elysia-backend/dao"
@@ -595,4 +598,169 @@ func (s *ClassServiceImpl) ListSemesters(ctx context.Context) (*ListSemestersRes
 		Message:   consts.MessageQuerySuccess,
 		Semesters: items,
 	}, nil
+}
+
+// ==================== 班级公告 ====================
+
+// AnnouncementItem 单条公告
+type AnnouncementItem struct {
+	Id          string `json:"id"`           // 公告唯一ID
+	Title       string `json:"title"`        // 公告标题
+	Content     string `json:"content"`      // 公告内容
+	PublishTime string `json:"publish_time"` // 发布时间
+}
+
+// PublishAnnouncementRequest 发布公告请求
+type PublishAnnouncementRequest struct {
+	TeacherId string `json:"teacher_id"` // 教师ID（必填）
+	ClassId   string `json:"class_id"`   // 班级ID（必填）
+	Title     string `json:"title"`      // 公告标题（必填）
+	Content   string `json:"content"`    // 公告内容（必填）
+}
+
+// PublishAnnouncementResponse 发布公告响应
+type PublishAnnouncementResponse struct {
+	Code    int32  `json:"code"`
+	Message string `json:"message"`
+}
+
+// DeleteAnnouncementRequest 删除公告请求
+type DeleteAnnouncementRequest struct {
+	TeacherId      string `json:"teacher_id"`      // 教师ID（必填）
+	ClassId        string `json:"class_id"`        // 班级ID（必填）
+	AnnouncementId string `json:"announcement_id"` // 公告ID（必填）
+}
+
+// DeleteAnnouncementResponse 删除公告响应
+type DeleteAnnouncementResponse struct {
+	Code    int32  `json:"code"`
+	Message string `json:"message"`
+}
+
+// GetAnnouncementsRequest 查询公告列表请求
+type GetAnnouncementsRequest struct {
+	ClassId string `json:"class_id"` // 班级ID（必填）
+}
+
+// GetAnnouncementsResponse 查询公告列表响应
+type GetAnnouncementsResponse struct {
+	Code          int32               `json:"code"`
+	Message       string              `json:"message"`
+	Announcements []*AnnouncementItem `json:"announcements"`
+}
+
+// PublishAnnouncement 发布公告（仅教师）
+// 公告以 JSON 数组形式存储在 class.announcement 字段中
+func (s *ClassServiceImpl) PublishAnnouncement(ctx context.Context, req *PublishAnnouncementRequest) (*PublishAnnouncementResponse, error) {
+	if req.TeacherId == "" || req.ClassId == "" {
+		return &PublishAnnouncementResponse{Code: 400, Message: "teacher_id 和 class_id 不能为空"}, nil
+	}
+	if req.Title == "" {
+		return &PublishAnnouncementResponse{Code: 400, Message: "公告标题不能为空"}, nil
+	}
+	if req.Content == "" {
+		return &PublishAnnouncementResponse{Code: 400, Message: "公告内容不能为空"}, nil
+	}
+
+	classDAO := dao.NewClassDAO()
+	// 验证教师权限
+	class, err := classDAO.GetClassById(req.ClassId)
+	if err != nil || class == nil {
+		return &PublishAnnouncementResponse{Code: 404, Message: "班级不存在"}, nil
+	}
+	if class.TeacherId != req.TeacherId {
+		return &PublishAnnouncementResponse{Code: 403, Message: "无权操作该班级"}, nil
+	}
+
+	// 解析现有公告列表
+	announcements := parseAnnouncements(class.Announcement)
+
+	// 新增公告
+	newItem := &AnnouncementItem{
+		Id:          fmt.Sprintf("%d", time.Now().UnixNano()),
+		Title:       req.Title,
+		Content:     req.Content,
+		PublishTime: time.Now().Format("2006-01-02 15:04:05"),
+	}
+	// 新公告插入到最前面
+	announcements = append([]*AnnouncementItem{newItem}, announcements...)
+
+	// 序列化回 JSON 存储
+	jsonBytes, err := json.Marshal(announcements)
+	if err != nil {
+		return &PublishAnnouncementResponse{Code: 500, Message: "序列化公告失败"}, nil
+	}
+
+	if err := classDAO.UpdateClass(req.ClassId, map[string]interface{}{
+		"announcement": string(jsonBytes),
+	}); err != nil {
+		return &PublishAnnouncementResponse{Code: 500, Message: "保存公告失败"}, nil
+	}
+
+	return &PublishAnnouncementResponse{Code: consts.SuccessCode, Message: "发布公告成功"}, nil
+}
+
+// DeleteAnnouncement 删除公告（仅教师）
+func (s *ClassServiceImpl) DeleteAnnouncement(ctx context.Context, req *DeleteAnnouncementRequest) (*DeleteAnnouncementResponse, error) {
+	if req.TeacherId == "" || req.ClassId == "" || req.AnnouncementId == "" {
+		return &DeleteAnnouncementResponse{Code: 400, Message: "参数不能为空"}, nil
+	}
+
+	classDAO := dao.NewClassDAO()
+	class, err := classDAO.GetClassById(req.ClassId)
+	if err != nil || class == nil {
+		return &DeleteAnnouncementResponse{Code: 404, Message: "班级不存在"}, nil
+	}
+	if class.TeacherId != req.TeacherId {
+		return &DeleteAnnouncementResponse{Code: 403, Message: "无权操作该班级"}, nil
+	}
+
+	announcements := parseAnnouncements(class.Announcement)
+	filtered := make([]*AnnouncementItem, 0, len(announcements))
+	for _, a := range announcements {
+		if a.Id != req.AnnouncementId {
+			filtered = append(filtered, a)
+		}
+	}
+
+	jsonBytes, _ := json.Marshal(filtered)
+	if err := classDAO.UpdateClass(req.ClassId, map[string]interface{}{
+		"announcement": string(jsonBytes),
+	}); err != nil {
+		return &DeleteAnnouncementResponse{Code: 500, Message: "删除公告失败"}, nil
+	}
+
+	return &DeleteAnnouncementResponse{Code: consts.SuccessCode, Message: "删除公告成功"}, nil
+}
+
+// GetAnnouncements 查询班级公告列表（师生共用）
+func (s *ClassServiceImpl) GetAnnouncements(ctx context.Context, req *GetAnnouncementsRequest) (*GetAnnouncementsResponse, error) {
+	if req.ClassId == "" {
+		return &GetAnnouncementsResponse{Code: 400, Message: "class_id 不能为空"}, nil
+	}
+
+	classDAO := dao.NewClassDAO()
+	class, err := classDAO.GetClassById(req.ClassId)
+	if err != nil || class == nil {
+		return &GetAnnouncementsResponse{Code: 404, Message: "班级不存在"}, nil
+	}
+
+	announcements := parseAnnouncements(class.Announcement)
+	return &GetAnnouncementsResponse{
+		Code:          consts.SuccessCode,
+		Message:       consts.MessageQuerySuccess,
+		Announcements: announcements,
+	}, nil
+}
+
+// parseAnnouncements 解析 announcement 字段（JSON 数组）
+func parseAnnouncements(raw string) []*AnnouncementItem {
+	if raw == "" {
+		return []*AnnouncementItem{}
+	}
+	var items []*AnnouncementItem
+	if err := json.Unmarshal([]byte(raw), &items); err != nil {
+		return []*AnnouncementItem{}
+	}
+	return items
 }
