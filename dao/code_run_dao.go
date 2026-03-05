@@ -10,6 +10,8 @@ type CodeRunDAO interface {
 	GetCodeRunById(id int64) (*code.CodeRun, error)
 	UpdateCodeRun(id int64, updates map[string]interface{}) error
 	ListCodeRunsByStudent(studentId string, problemId int64, limit int) ([]*code.CodeRun, error)
+	// BatchGetAcceptedProblems 批量查询学生已完全通过（accepted）的题目ID集合
+	BatchGetAcceptedProblems(studentId string, problemIds []int64) (map[int64]bool, error)
 }
 
 type codeRunDAOImpl struct{}
@@ -50,4 +52,25 @@ func (d *codeRunDAOImpl) ListCodeRunsByStudent(studentId string, problemId int64
 		return nil, err
 	}
 	return records, nil
+}
+
+// BatchGetAcceptedProblems 批量查询学生已完全通过（accepted）的题目ID集合
+// 只查 run_type='submit' 且 status='accepted' 的记录
+func (d *codeRunDAOImpl) BatchGetAcceptedProblems(studentId string, problemIds []int64) (map[int64]bool, error) {
+	result := make(map[int64]bool)
+	if len(problemIds) == 0 {
+		return result, nil
+	}
+	var acceptedIds []int64
+	err := DB.Model(&code.CodeRun{}).
+		Select("DISTINCT problem_id").
+		Where("student_id = ? AND problem_id IN ? AND run_type = 'submit' AND status = 'accepted'", studentId, problemIds).
+		Pluck("problem_id", &acceptedIds).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range acceptedIds {
+		result[id] = true
+	}
+	return result, nil
 }

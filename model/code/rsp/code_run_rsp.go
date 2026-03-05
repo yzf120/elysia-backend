@@ -24,5 +24,13 @@ type CodeRunResult struct {
 	MemoryUsed int64  `json:"memory_used"` // 内存使用（KB）
 	RunType    string `json:"run_type"`    // test/submit
 	Language   string `json:"language"`
+	Code       string `json:"code"` // 提交的代码
 	CreatedAt  string `json:"created_at"`
+}
+
+// ListCodeRunRecordsResponse 查询运行记录列表的响应
+type ListCodeRunRecordsResponse struct {
+	Code    int32            `json:"code"`
+	Message string           `json:"message"`
+	Records []*CodeRunResult `json:"records"`
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/yzf120/elysia-backend/dao"
 	"github.com/yzf120/elysia-backend/middleware"
 	"github.com/yzf120/elysia-backend/router"
+	"github.com/yzf120/elysia-backend/rpc"
 	"log"
 	"trpc.group/trpc-go/trpc-go"
 	thttp "trpc.group/trpc-go/trpc-go/http"
@@ -33,11 +34,14 @@ func main() {
 	}
 	defer client.GetRedisClient().Close()
 
+	// 初始化 chat-agent RPC 客户端
+	rpc.InitAgentClient()
+
 	r := mux.NewRouter()
-	
+
 	// 初始化路由器（必须在RegisterRouter之前调用，以初始化Service实例）
 	router.Init()
-	
+
 	router.RegisterRouter(r)
 
 	// 创建带 CORS 的 handler（包装整个路由器）

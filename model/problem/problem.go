@@ -17,6 +17,9 @@ type Problem struct {
 	Constraints         string    `gorm:"column:constraints;type:text" json:"constraints"`
 	AdvancedRequirement string    `gorm:"column:advanced_requirement;type:text" json:"advanced_requirement"`
 	TestCases           string    `gorm:"column:test_cases;type:json;not null" json:"test_cases"`
+	Showcase            string    `gorm:"column:showcase;type:json;not null" json:"showcase"`
+	TimeLimit           int       `gorm:"column:time_limit;type:int;not null;default:1000" json:"time_limit"`
+	MemoryLimit         int       `gorm:"column:memory_limit;type:int;not null;default:256" json:"memory_limit"`
 	CreatedAt           time.Time `gorm:"column:created_at;type:datetime;autoCreateTime" json:"created_at"`
 	UpdatedAt           time.Time `gorm:"column:updated_at;type:datetime;autoUpdateTime" json:"updated_at"`
 }

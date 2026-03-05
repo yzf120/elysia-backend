@@ -14,7 +14,19 @@ server:
       port: 8001
       network: tcp
       protocol: http_no_protocol
-      timeout: 3000
+      timeout: 0 # 不设超时，SSE流式接口需要长连接
+
+# 客户端配置
+client:
+  timeout: 120000
+  service:
+    # chat-agent RPC 服务
+    - name: trpc.elysia.chat_agent.agent.AgentService
+      target: ip://127.0.0.1:8081
+      timeout: 120000 # 120秒超时，支持长时间流式响应
+      network: tcp
+      protocol: trpc
+
 # 插件配置
 plugins:
   # 日志配置

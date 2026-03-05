@@ -13,4 +13,7 @@ type UpdateProblemRequest struct {
 	Constraints         string `json:"constraints"`
 	AdvancedRequirement string `json:"advanced_requirement"`
 	TestCases           string `json:"test_cases"`
+	Showcase            string `json:"showcase"`
+	TimeLimit           int    `json:"time_limit"`
+	MemoryLimit         int    `json:"memory_limit"`
 }

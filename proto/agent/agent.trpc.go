@@ -13,6 +13,7 @@ import (
 	"trpc.group/trpc-go/trpc-go/codec"
 	_ "trpc.group/trpc-go/trpc-go/http"
 	"trpc.group/trpc-go/trpc-go/server"
+	"trpc.group/trpc-go/trpc-go/stream"
 )
 
 // START ======================================= Server Service Definition ======================================= START
@@ -28,6 +29,31 @@ type AgentServiceService interface {
 	DeleteAgent(ctx context.Context, req *DeleteAgentRequest) (*DeleteAgentResponse, error)
 
 	ExecuteAgent(ctx context.Context, req *ExecuteAgentRequest) (*ExecuteAgentResponse, error)
+
+	// StreamChat 流式对话接口
+	StreamChat(req *AgentStreamChatRequest, stream AgentService_StreamChatServer) error
+}
+
+// AgentService_StreamChatServer 服务端流式接口
+type AgentService_StreamChatServer interface {
+	Send(*AgentStreamChatResponse) error
+	server.Stream
+}
+
+type agentServiceStreamChatServer struct {
+	server.Stream
+}
+
+func (x *agentServiceStreamChatServer) Send(m *AgentStreamChatResponse) error {
+	return x.Stream.SendMsg(m)
+}
+
+func AgentServiceService_StreamChat_Handler(srv interface{}, s server.Stream) error {
+	m := new(AgentStreamChatRequest)
+	if err := s.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(AgentServiceService).StreamChat(m, &agentServiceStreamChatServer{s})
 }
 
 func AgentServiceService_CreateAgent_Handler(svr interface{}, ctx context.Context, f server.FilterFunc) (interface{}, error) {
@@ -122,28 +148,36 @@ func AgentServiceService_ExecuteAgent_Handler(svr interface{}, ctx context.Conte
 
 // AgentServiceServer_ServiceDesc descriptor for server.RegisterService.
 var AgentServiceServer_ServiceDesc = server.ServiceDesc{
-	ServiceName: "trpc.elysia.backend.agent.AgentService",
-	HandlerType: ((*AgentServiceService)(nil)),
+	ServiceName:  "trpc.elysia.chat_agent.agent.AgentService",
+	HandlerType:  ((*AgentServiceService)(nil)),
+	StreamHandle: stream.NewStreamDispatcher(),
 	Methods: []server.Method{
 		{
-			Name: "/trpc.elysia.backend.agent.AgentService/CreateAgent",
+			Name: "/trpc.elysia.chat_agent.agent.AgentService/CreateAgent",
 			Func: AgentServiceService_CreateAgent_Handler,
 		},
 		{
-			Name: "/trpc.elysia.backend.agent.AgentService/GetAgent",
+			Name: "/trpc.elysia.chat_agent.agent.AgentService/GetAgent",
 			Func: AgentServiceService_GetAgent_Handler,
 		},
 		{
-			Name: "/trpc.elysia.backend.agent.AgentService/UpdateAgent",
+			Name: "/trpc.elysia.chat_agent.agent.AgentService/UpdateAgent",
 			Func: AgentServiceService_UpdateAgent_Handler,
 		},
 		{
-			Name: "/trpc.elysia.backend.agent.AgentService/DeleteAgent",
+			Name: "/trpc.elysia.chat_agent.agent.AgentService/DeleteAgent",
 			Func: AgentServiceService_DeleteAgent_Handler,
 		},
 		{
-			Name: "/trpc.elysia.backend.agent.AgentService/ExecuteAgent",
+			Name: "/trpc.elysia.chat_agent.agent.AgentService/ExecuteAgent",
 			Func: AgentServiceService_ExecuteAgent_Handler,
+		},
+	},
+	Streams: []server.StreamDesc{
+		{
+			StreamName:    "/trpc.elysia.chat_agent.agent.AgentService/StreamChat",
+			Handler:       AgentServiceService_StreamChat_Handler,
+			ServerStreams: true,
 		},
 	},
 }
@@ -175,6 +209,10 @@ func (s *UnimplementedAgentService) ExecuteAgent(ctx context.Context, req *Execu
 	return nil, errors.New("rpc ExecuteAgent of service AgentService is not implemented")
 }
 
+func (s *UnimplementedAgentService) StreamChat(req *AgentStreamChatRequest, stream AgentService_StreamChatServer) error {
+	return errors.New("rpc StreamChat of service AgentService is not implemented")
+}
+
 // END --------------------------------- Default Unimplemented Server Service --------------------------------- END
 
 // END ======================================= Server Service Definition ======================================= END
@@ -192,15 +230,40 @@ type AgentServiceClientProxy interface {
 	DeleteAgent(ctx context.Context, req *DeleteAgentRequest, opts ...client.Option) (rsp *DeleteAgentResponse, err error)
 
 	ExecuteAgent(ctx context.Context, req *ExecuteAgentRequest, opts ...client.Option) (rsp *ExecuteAgentResponse, err error)
+
+	// StreamChat 流式对话接口
+	StreamChat(ctx context.Context, req *AgentStreamChatRequest, opts ...client.Option) (AgentService_StreamChatClient, error)
+
+	// ListModels 查询支持的模型列表
+	ListModels(ctx context.Context, req *AgentListModelsRequest, opts ...client.Option) (*AgentListModelsResponse, error)
+}
+
+// AgentService_StreamChatClient 客户端流式接口
+type AgentService_StreamChatClient interface {
+	Recv() (*AgentStreamChatResponse, error)
+	client.ClientStream
+}
+
+type agentServiceStreamChatClient struct {
+	client.ClientStream
+}
+
+func (x *agentServiceStreamChatClient) Recv() (*AgentStreamChatResponse, error) {
+	m := new(AgentStreamChatResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 type AgentServiceClientProxyImpl struct {
-	client client.Client
-	opts   []client.Option
+	client       client.Client
+	streamClient stream.Client
+	opts         []client.Option
 }
 
 var NewAgentServiceClientProxy = func(opts ...client.Option) AgentServiceClientProxy {
-	return &AgentServiceClientProxyImpl{client: client.DefaultClient, opts: opts}
+	return &AgentServiceClientProxyImpl{client: client.DefaultClient, streamClient: stream.DefaultStreamClient, opts: opts}
 }
 
 func (c *AgentServiceClientProxyImpl) CreateAgent(ctx context.Context, req *CreateAgentRequest, opts ...client.Option) (*CreateAgentResponse, error) {
@@ -297,6 +360,60 @@ func (c *AgentServiceClientProxyImpl) ExecuteAgent(ctx context.Context, req *Exe
 	callopts = append(callopts, c.opts...)
 	callopts = append(callopts, opts...)
 	rsp := &ExecuteAgentResponse{}
+	if err := c.client.Invoke(ctx, req, rsp, callopts...); err != nil {
+		return nil, err
+	}
+	return rsp, nil
+}
+
+func (c *AgentServiceClientProxyImpl) StreamChat(ctx context.Context, req *AgentStreamChatRequest, opts ...client.Option) (AgentService_StreamChatClient, error) {
+	ctx, msg := codec.WithCloneMessage(ctx)
+
+	msg.WithClientRPCName("/trpc.elysia.chat_agent.agent.AgentService/StreamChat")
+	msg.WithCalleeServiceName(AgentServiceServer_ServiceDesc.ServiceName)
+	msg.WithCalleeApp("")
+	msg.WithCalleeServer("")
+	msg.WithCalleeService("AgentService")
+	msg.WithCalleeMethod("StreamChat")
+	msg.WithSerializationType(codec.SerializationTypeJSON)
+
+	clientStreamDesc := &client.ClientStreamDesc{}
+	clientStreamDesc.StreamName = "/trpc.elysia.chat_agent.agent.AgentService/StreamChat"
+	clientStreamDesc.ClientStreams = false
+	clientStreamDesc.ServerStreams = true
+
+	callopts := make([]client.Option, 0, len(c.opts)+len(opts))
+	callopts = append(callopts, c.opts...)
+	callopts = append(callopts, opts...)
+
+	s, err := c.streamClient.NewStream(ctx, clientStreamDesc, "/trpc.elysia.chat_agent.agent.AgentService/StreamChat", callopts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &agentServiceStreamChatClient{s}
+	if err := x.ClientStream.SendMsg(req); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+func (c *AgentServiceClientProxyImpl) ListModels(ctx context.Context, req *AgentListModelsRequest, opts ...client.Option) (*AgentListModelsResponse, error) {
+	ctx, msg := codec.WithCloneMessage(ctx)
+	defer codec.PutBackMessage(msg)
+	msg.WithClientRPCName("/trpc.elysia.chat_agent.agent.AgentService/ListModels")
+	msg.WithCalleeServiceName(AgentServiceServer_ServiceDesc.ServiceName)
+	msg.WithCalleeApp("")
+	msg.WithCalleeServer("")
+	msg.WithCalleeService("AgentService")
+	msg.WithCalleeMethod("ListModels")
+	msg.WithSerializationType(codec.SerializationTypeJSON)
+	callopts := make([]client.Option, 0, len(c.opts)+len(opts))
+	callopts = append(callopts, c.opts...)
+	callopts = append(callopts, opts...)
+	rsp := &AgentListModelsResponse{}
 	if err := c.client.Invoke(ctx, req, rsp, callopts...); err != nil {
 		return nil, err
 	}

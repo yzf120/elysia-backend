@@ -33,6 +33,12 @@ type langConfig struct {
 	RunCmd     []string // 运行命令（%s 占位符替换为文件路径）
 }
 
+// javaHome Java 安装目录（Homebrew OpenJDK 17）
+const javaHome = "/opt/homebrew/opt/openjdk@17"
+
+// sandboxInclude 沙箱头文件目录（包含 bits/stdc++.h 等 macOS 缺失的头文件）
+const sandboxInclude = "/Users/sylvainyang/project/elysia/elysia-backend/sandbox/include"
+
 var langConfigs = map[string]langConfig{
 	"python": {
 		FileName:   "main.py",
@@ -41,8 +47,8 @@ var langConfigs = map[string]langConfig{
 	},
 	"java": {
 		FileName:   "Main.java",
-		CompileCmd: []string{"javac", "Main.java"},
-		RunCmd:     []string{"java", "-cp", ".", "Main"},
+		CompileCmd: []string{javaHome + "/bin/javac", "Main.java"},
+		RunCmd:     []string{javaHome + "/bin/java", "-cp", ".", "Main"},
 	},
 	"go": {
 		FileName:   "main.go",
@@ -51,12 +57,12 @@ var langConfigs = map[string]langConfig{
 	},
 	"cpp": {
 		FileName:   "main.cpp",
-		CompileCmd: []string{"g++", "-O2", "-o", "main_bin", "main.cpp"},
+		CompileCmd: []string{"g++", "-O2", "-std=c++17", "-I", sandboxInclude, "-o", "main_bin", "main.cpp"},
 		RunCmd:     []string{"./main_bin"},
 	},
 	"c": {
 		FileName:   "main.c",
-		CompileCmd: []string{"gcc", "-O2", "-o", "main_bin", "main.c"},
+		CompileCmd: []string{"gcc", "-O2", "-I", sandboxInclude, "-o", "main_bin", "main.c"},
 		RunCmd:     []string{"./main_bin"},
 	},
 }
@@ -76,7 +82,7 @@ func NewCodeRunService() *CodeRunService {
 }
 
 // SubmitCodeRun 提交代码运行任务（异步执行）
-// testInput：测试模式下直接传入的样例输入，非空时跳过查题目直接运行
+// testInput：测试模式下直接传入的样例输入（已废弃，改为从 showcase 字段读取）
 func (s *CodeRunService) SubmitCodeRun(ctx context.Context, studentId string, problemId int64, language, code, runType, testInput string) (*codeModel.CodeRun, error) {
 	// 校验语言
 	if _, ok := langConfigs[language]; !ok {
@@ -85,6 +91,12 @@ func (s *CodeRunService) SubmitCodeRun(ctx context.Context, studentId string, pr
 	// 校验 runType
 	if runType != "test" && runType != "submit" {
 		return nil, errs.NewCommonError(errs.ErrBadRequest, "run_type 必须为 test 或 submit")
+	}
+
+	// 查询题目（test 和 submit 都需要）
+	p, err := s.problemDAO.GetProblemById(problemId)
+	if err != nil || p == nil {
+		return nil, errs.NewCommonError(errs.ErrBadRequest, "题目不存在")
 	}
 
 	// 创建运行记录（pending 状态）
@@ -100,19 +112,11 @@ func (s *CodeRunService) SubmitCodeRun(ctx context.Context, studentId string, pr
 		return nil, errs.NewCommonError(errs.ErrInternal, "创建运行记录失败: "+err.Error())
 	}
 
-	if runType == "test" && testInput != "" {
-		// 测试模式：直接用前端传来的样例输入运行，不查数据库题目
-		go s.executeCodeWithInput(record.Id, language, code, testInput)
+	if runType == "test" {
+		// 测试模式：使用 showcase 字段的用例（不记录到运行记录，直接执行后更新结果）
+		go s.executeCodeWithShowcase(record.Id, p, language, code)
 	} else {
-		// 提交模式：查询题目获取全部测试用例
-		p, err := s.problemDAO.GetProblemById(problemId)
-		if err != nil || p == nil {
-			_ = s.codeRunDAO.UpdateCodeRun(record.Id, map[string]interface{}{
-				"status":    "runtime_error",
-				"error_msg": "题目不存在",
-			})
-			return record, nil
-		}
+		// 提交模式：执行 test_cases 全部用例
 		go s.executeCode(record.Id, p, language, code, runType)
 	}
 
@@ -128,9 +132,50 @@ func (s *CodeRunService) GetCodeRunResult(runId int64) (*codeModel.CodeRun, erro
 	return record, nil
 }
 
-// executeCodeWithInput 测试模式：直接用给定输入运行代码（不依赖数据库题目）
-func (s *CodeRunService) executeCodeWithInput(runId int64, language, code, input string) {
+// ListCodeRunRecords 查询学生某题的运行记录列表（倒序，只查 submit 类型）
+func (s *CodeRunService) ListCodeRunRecords(studentId string, problemId int64, limit int) ([]*codeModel.CodeRun, error) {
+	records, err := s.codeRunDAO.ListCodeRunsByStudent(studentId, problemId, limit)
+	if err != nil {
+		return nil, errs.NewCommonError(errs.ErrInternal, "查询运行记录失败: "+err.Error())
+	}
+	return records, nil
+}
+
+// BatchGetAcceptedProblems 批量查询学生已完全通过的题目ID集合
+func (s *CodeRunService) BatchGetAcceptedProblems(studentId string, problemIds []int64) (map[int64]bool, error) {
+	result, err := s.codeRunDAO.BatchGetAcceptedProblems(studentId, problemIds)
+	if err != nil {
+		return nil, errs.NewCommonError(errs.ErrInternal, "查询完成状态失败: "+err.Error())
+	}
+	return result, nil
+}
+
+// showcaseCaseResult 单个 showcase 用例的执行结果
+type showcaseCaseResult struct {
+	Index          int    `json:"index"`           // 用例序号（从1开始）
+	Input          string `json:"input"`           // 输入
+	ExpectedOutput string `json:"expected_output"` // 预期输出
+	ActualOutput   string `json:"actual_output"`   // 实际输出
+	Passed         bool   `json:"passed"`          // 是否通过
+	Status         string `json:"status"`          // accepted / wrong_answer / runtime_error / time_limit_exceeded 等
+	ErrorMsg       string `json:"error_msg"`       // 错误信息（编译/运行错误时）
+	TimeCost       int64  `json:"time_cost"`       // 执行耗时 ms
+}
+
+// executeCodeWithShowcase 测试模式：使用题目 showcase 字段的用例运行代码
+// output 字段存储 JSON 格式的每个 case 详细结果，供前端可视化展示
+func (s *CodeRunService) executeCodeWithShowcase(runId int64, p *problem.Problem, language, code string) {
 	_ = s.codeRunDAO.UpdateCodeRun(runId, map[string]interface{}{"status": "running"})
+
+	// 解析 showcase 用例
+	var showcaseCases []testCase
+	if err := json.Unmarshal([]byte(p.Showcase), &showcaseCases); err != nil || len(showcaseCases) == 0 {
+		_ = s.codeRunDAO.UpdateCodeRun(runId, map[string]interface{}{
+			"status":    "runtime_error",
+			"error_msg": "题目 showcase 格式错误或为空",
+		})
+		return
+	}
 
 	cfg := langConfigs[language]
 	tmpDir, err := os.MkdirTemp("", "elysia_code_*")
@@ -157,25 +202,66 @@ func (s *CodeRunService) executeCodeWithInput(runId int64, language, code, input
 		defer cancel()
 		compileCmd := exec.CommandContext(compileCtx, cfg.CompileCmd[0], cfg.CompileCmd[1:]...)
 		compileCmd.Dir = tmpDir
+		compileCmd.Env = buildEnv()
 		var compileErr bytes.Buffer
 		compileCmd.Stderr = &compileErr
 		if err := compileCmd.Run(); err != nil {
+			errStr := compileErr.String()
 			_ = s.codeRunDAO.UpdateCodeRun(runId, map[string]interface{}{
 				"status":    "compile_error",
-				"error_msg": compileErr.String(),
+				"error_msg": errStr,
 			})
 			return
 		}
 	}
 
 	const defaultTimeLimitMs int64 = 5000
-	status, output, errMsg, timeCost, memUsed := s.runSingleCase(tmpDir, cfg, input, defaultTimeLimitMs)
+	var totalTimeCost int64
+	var maxMemoryUsed int64
+	var caseResults []showcaseCaseResult
+	finalStatus := "accepted"
+
+	for i, tc := range showcaseCases {
+		status, output, errMsg, timeCost, memUsed := s.runSingleCase(tmpDir, cfg, tc.Input, defaultTimeLimitMs)
+		totalTimeCost += timeCost
+		if memUsed > maxMemoryUsed {
+			maxMemoryUsed = memUsed
+		}
+
+		actualOutput := strings.TrimSpace(output)
+		expectedOutput := strings.TrimSpace(tc.ExpectedOutput)
+		passed := status == "accepted" && actualOutput == expectedOutput
+
+		caseResult := showcaseCaseResult{
+			Index:          i + 1,
+			Input:          tc.Input,
+			ExpectedOutput: expectedOutput,
+			ActualOutput:   actualOutput,
+			Passed:         passed,
+			Status:         status,
+			ErrorMsg:       errMsg,
+			TimeCost:       timeCost,
+		}
+		// 若运行本身出错（非 wrong_answer），status 直接用后端返回的
+		if status != "accepted" {
+			caseResult.Status = status
+			finalStatus = status
+		} else if !passed {
+			caseResult.Status = "wrong_answer"
+			finalStatus = "wrong_answer"
+		}
+		caseResults = append(caseResults, caseResult)
+	}
+
+	// 将所有 case 结果序列化为 JSON 存入 output 字段
+	outputJSON, _ := json.Marshal(caseResults)
+
 	_ = s.codeRunDAO.UpdateCodeRun(runId, map[string]interface{}{
-		"status":      status,
-		"output":      output,
-		"error_msg":   errMsg,
-		"time_cost":   timeCost,
-		"memory_used": memUsed,
+		"status":      finalStatus,
+		"output":      string(outputJSON),
+		"error_msg":   "",
+		"time_cost":   totalTimeCost,
+		"memory_used": maxMemoryUsed,
 	})
 }
 
@@ -195,21 +281,8 @@ func (s *CodeRunService) executeCode(runId int64, p *problem.Problem, language, 
 	}
 
 	// 根据 runType 决定使用哪些测试用例
-	var casesToRun []testCase
-	if runType == "test" {
-		// 测试模式：只跑样例用例（is_sample=1）
-		for _, tc := range testCases {
-			if tc.IsSample == 1 {
-				casesToRun = append(casesToRun, tc)
-			}
-		}
-		if len(casesToRun) == 0 {
-			casesToRun = testCases[:1] // 至少跑第一个
-		}
-	} else {
-		// 提交模式：跑所有测试用例
-		casesToRun = testCases
-	}
+	// submit 模式：跑所有测试用例
+	casesToRun := testCases
 
 	cfg := langConfigs[language]
 
@@ -240,6 +313,7 @@ func (s *CodeRunService) executeCode(runId int64, p *problem.Problem, language, 
 		defer cancel()
 		compileCmd := exec.CommandContext(compileCtx, cfg.CompileCmd[0], cfg.CompileCmd[1:]...)
 		compileCmd.Dir = tmpDir
+		compileCmd.Env = buildEnv()
 		var compileErr bytes.Buffer
 		compileCmd.Stderr = &compileErr
 		if err := compileCmd.Run(); err != nil {
@@ -254,8 +328,8 @@ func (s *CodeRunService) executeCode(runId int64, p *problem.Problem, language, 
 	// 逐个运行测试用例
 	var totalTimeCost int64
 	var maxMemoryUsed int64
-	var outputLines []string
 	finalStatus := "accepted"
+	var caseResults []showcaseCaseResult
 
 	// 默认时间限制 1000ms
 	const defaultTimeLimitMs int64 = 1000
@@ -267,28 +341,63 @@ func (s *CodeRunService) executeCode(runId int64, p *problem.Problem, language, 
 			maxMemoryUsed = memUsed
 		}
 
-		if status != "accepted" {
-			finalStatus = status
-			_ = s.codeRunDAO.UpdateCodeRun(runId, map[string]interface{}{
-				"status":      finalStatus,
-				"output":      output,
-				"error_msg":   fmt.Sprintf("第 %d 个测试点失败\n%s", i+1, errMsg),
-				"time_cost":   totalTimeCost,
-				"memory_used": maxMemoryUsed,
-			})
-			return
+		actualOutput := strings.TrimSpace(output)
+		expectedOutput := strings.TrimSpace(tc.ExpectedOutput)
+
+		caseStatus := status
+		passed := false
+		if status == "accepted" {
+			if actualOutput == expectedOutput {
+				passed = true
+			} else {
+				caseStatus = "wrong_answer"
+			}
 		}
-		outputLines = append(outputLines, strings.TrimSpace(output))
+
+		caseResults = append(caseResults, showcaseCaseResult{
+			Index:          i + 1,
+			Input:          tc.Input,
+			ExpectedOutput: expectedOutput,
+			ActualOutput:   actualOutput,
+			Passed:         passed,
+			Status:         caseStatus,
+			ErrorMsg:       errMsg,
+			TimeCost:       timeCost,
+		})
+
+		if !passed && finalStatus == "accepted" {
+			finalStatus = caseStatus
+		}
 	}
 
-	// 全部通过
+	// 将所有 case 结果序列化为 JSON 存入 output 字段
+	outputJSON, _ := json.Marshal(caseResults)
+
 	_ = s.codeRunDAO.UpdateCodeRun(runId, map[string]interface{}{
 		"status":      finalStatus,
-		"output":      strings.Join(outputLines, "\n---\n"),
+		"output":      string(outputJSON),
 		"error_msg":   "",
 		"time_cost":   totalTimeCost,
 		"memory_used": maxMemoryUsed,
 	})
+}
+
+// buildEnv 构建子进程环境变量，确保 Java 等工具路径可被找到
+func buildEnv() []string {
+	path := os.Getenv("PATH")
+	// 将 Homebrew Java 路径注入，避免 Go 服务进程 PATH 缺失
+	javaBin := javaHome + "/bin"
+	if !strings.Contains(path, javaBin) {
+		path = javaBin + ":" + path
+	}
+	env := os.Environ()
+	for i, e := range env {
+		if strings.HasPrefix(e, "PATH=") {
+			env[i] = "PATH=" + path
+			return env
+		}
+	}
+	return append(env, "PATH="+path)
 }
 
 // runSingleCase 运行单个测试用例，返回 (status, output, errMsg, timeCostMs, memUsedKB)
@@ -300,6 +409,7 @@ func (s *CodeRunService) runSingleCase(tmpDir string, cfg langConfig, input stri
 	copy(runArgs, cfg.RunCmd)
 	cmd := exec.CommandContext(runCtx, runArgs[0], runArgs[1:]...)
 	cmd.Dir = tmpDir
+	cmd.Env = buildEnv()
 	cmd.Stdin = strings.NewReader(input)
 
 	var stdout, stderr bytes.Buffer

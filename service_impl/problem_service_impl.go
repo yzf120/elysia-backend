@@ -36,6 +36,9 @@ func (s *ProblemServiceImpl) CreateProblem(ctx context.Context, request *req.Cre
 		Constraints:         request.Constraints,
 		AdvancedRequirement: request.AdvancedRequirement,
 		TestCases:           request.TestCases,
+		Showcase:            request.Showcase,
+		TimeLimit:           request.TimeLimit,
+		MemoryLimit:         request.MemoryLimit,
 	}
 	created, err := s.problemService.CreateProblem(ctx, p)
 	if err != nil {
@@ -77,6 +80,9 @@ func (s *ProblemServiceImpl) GetProblem(ctx context.Context, request *req.GetPro
 			Constraints:         p.Constraints,
 			AdvancedRequirement: p.AdvancedRequirement,
 			TestCases:           p.TestCases,
+			Showcase:            p.Showcase,
+			TimeLimit:           p.TimeLimit,
+			MemoryLimit:         p.MemoryLimit,
 			CreatedAt:           p.CreatedAt.Format("2006-01-02 15:04:05"),
 			UpdatedAt:           p.UpdatedAt.Format("2006-01-02 15:04:05"),
 		},
@@ -115,6 +121,15 @@ func (s *ProblemServiceImpl) UpdateProblem(ctx context.Context, request *req.Upd
 	}
 	if request.TestCases != "" {
 		updates["test_cases"] = request.TestCases
+	}
+	if request.Showcase != "" {
+		updates["showcase"] = request.Showcase
+	}
+	if request.TimeLimit > 0 {
+		updates["time_limit"] = request.TimeLimit
+	}
+	if request.MemoryLimit > 0 {
+		updates["memory_limit"] = request.MemoryLimit
 	}
 
 	_, err := s.problemService.UpdateProblem(request.Id, updates)

@@ -212,3 +212,15 @@ INSERT INTO `problem` (
     NULL,
     '[{"input":"4\\n1 3 5 6\\n5","expected_output":"2","is_sample":1,"explanation":"目标值5在数组中，下标为2"},{"input":"4\\n1 3 5 6\\n2","expected_output":"1","is_sample":1,"explanation":"目标值2应插入下标1"},{"input":"4\\n1 3 5 6\\n7","expected_output":"4","is_sample":0,"explanation":"目标值7应插入末尾"},{"input":"4\\n1 3 5 6\\n0","expected_output":"0","is_sample":0,"explanation":"目标值0应插入开头"}]'
 );
+
+-- =============================================
+-- 新增时间限制和内存限制字段
+-- time_limit: 单位 ms，默认 1000ms
+-- memory_limit: 单位 MB，默认 256MB
+-- =============================================
+ALTER TABLE `problem`
+    ADD COLUMN `time_limit`   INT NOT NULL DEFAULT 1000 COMMENT '时间限制（单位：ms，默认1000ms）' AFTER `test_cases`,
+    ADD COLUMN `memory_limit` INT NOT NULL DEFAULT 256  COMMENT '内存限制（单位：MB，默认256MB）'  AFTER `time_limit`;
+
+-- 将已有数据统一设置为默认值
+UPDATE `problem` SET `time_limit` = 1000, `memory_limit` = 256;
