@@ -11,7 +11,7 @@ import (
 	"github.com/yzf120/elysia-backend/service_impl"
 )
 
-var teacherApprovalService = service_impl.NewTeacherApprovalServiceImpl()
+var teacherApprovalService *service_impl.TeacherApprovalServiceImpl
 
 // RegisterTeacherApprovalRoutes 注册教师审批单路由
 func RegisterTeacherApprovalRoutes(protectedRouter *mux.Router) {

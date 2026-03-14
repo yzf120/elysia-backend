@@ -27,6 +27,9 @@ func Init() {
 	classService = service_impl.NewClassServiceImpl()
 	chapterService = service_impl.NewChapterServiceImpl()
 	codeRunService = service_impl.NewCodeRunServiceImpl()
+	platformContentService = service.NewPlatformContentService()
+	adminUserManagementService = service.NewAdminUserManagementService()
+	teacherApprovalService = service_impl.NewTeacherApprovalServiceImpl()
 }
 
 func RegisterRouter(router *mux.Router) {
@@ -76,6 +79,12 @@ func registerApiRouters(publicRouter *mux.Router, protectedRouter *mux.Router) {
 
 	// 代码运行相关接口（学生端）
 	registerCodeRun(protectedRouter)
+
+	// 平台系统公告与平台书架接口
+	RegisterPlatformContentRoutes(protectedRouter)
+
+	// 管理员用户管理接口
+	RegisterAdminUserManagementRoutes(protectedRouter)
 
 }
 

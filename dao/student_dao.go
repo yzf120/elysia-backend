@@ -2,6 +2,7 @@ package dao
 
 import (
 	"github.com/yzf120/elysia-backend/model/student"
+	"gorm.io/gorm"
 )
 
 // StudentDAO 学生数据访问对象
@@ -13,7 +14,9 @@ type StudentDAO interface {
 	UpdateStudent(studentId string, updates map[string]interface{}) error
 	DeleteStudent(studentId string) error
 	ListStudents(whereClause string, args []interface{}, limit, offset int32) ([]*student.Student, error)
+	ListStudentsAll(whereClause string, args []interface{}) ([]*student.Student, error)
 	CountStudents(whereClause string, args []interface{}) (int32, error)
+	BatchUpdateStudentStatus(studentIds []string, status int32) error
 }
 
 type studentDAOImpl struct{}
@@ -68,16 +71,24 @@ func (d *studentDAOImpl) DeleteStudent(studentId string) error {
 	return DB.Where("student_id = ?", studentId).Delete(&student.Student{}).Error
 }
 
-// ListStudents 查询学生列表
-func (d *studentDAOImpl) ListStudents(whereClause string, args []interface{}, limit, offset int32) ([]*student.Student, error) {
-	var students []*student.Student
+func (d *studentDAOImpl) buildStudentListQuery(whereClause string, args []interface{}) *gorm.DB {
 	query := DB.Model(&student.Student{})
-
 	if whereClause != "" {
 		query = query.Where(whereClause, args...)
 	}
+	return query.Order("create_time DESC")
+}
 
-	err := query.Limit(int(limit)).Offset(int(offset)).Find(&students).Error
+// ListStudents 查询学生列表
+func (d *studentDAOImpl) ListStudents(whereClause string, args []interface{}, limit, offset int32) ([]*student.Student, error) {
+	var students []*student.Student
+	err := d.buildStudentListQuery(whereClause, args).Limit(int(limit)).Offset(int(offset)).Find(&students).Error
+	return students, err
+}
+
+func (d *studentDAOImpl) ListStudentsAll(whereClause string, args []interface{}) ([]*student.Student, error) {
+	var students []*student.Student
+	err := d.buildStudentListQuery(whereClause, args).Find(&students).Error
 	return students, err
 }
 
@@ -85,11 +96,16 @@ func (d *studentDAOImpl) ListStudents(whereClause string, args []interface{}, li
 func (d *studentDAOImpl) CountStudents(whereClause string, args []interface{}) (int32, error) {
 	var count int64
 	query := DB.Model(&student.Student{})
-
 	if whereClause != "" {
 		query = query.Where(whereClause, args...)
 	}
-
 	err := query.Count(&count).Error
 	return int32(count), err
+}
+
+func (d *studentDAOImpl) BatchUpdateStudentStatus(studentIds []string, status int32) error {
+	if len(studentIds) == 0 {
+		return nil
+	}
+	return DB.Model(&student.Student{}).Where("student_id IN ?", studentIds).Updates(map[string]interface{}{"status": status}).Error
 }

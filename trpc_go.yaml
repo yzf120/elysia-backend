@@ -26,6 +26,18 @@ client:
       timeout: 120000 # 120秒超时，支持长时间流式响应
       network: tcp
       protocol: trpc
+    # session AgentSession RPC 服务
+    - name: trpc.elysia.session.agent_session.AgentSessionService
+      target: ip://127.0.0.1:8002
+      timeout: 10000
+      network: tcp
+      protocol: trpc
+    # session Conversation RPC 服务
+    - name: trpc.elysia.session.conversation.ConversationService
+      target: ip://127.0.0.1:8003
+      timeout: 10000
+      network: tcp
+      protocol: trpc
 
 # 插件配置
 plugins:

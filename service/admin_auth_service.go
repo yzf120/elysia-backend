@@ -150,3 +150,29 @@ func (s *AdminAuthService) LoginWithPassword(ctx context.Context, phoneNumber, p
 
 	return adminModel, token, nil
 }
+
+// UpdateAdminEmail 更新管理员邮箱
+func (s *AdminAuthService) UpdateAdminEmail(ctx context.Context, adminId, email string) error {
+	if adminId == "" {
+		return errs.NewCommonError(errs.ErrBadRequest, "管理员ID不能为空")
+	}
+	if email == "" {
+		return errs.NewCommonError(errs.ErrBadRequest, "邮箱不能为空")
+	}
+
+	// 检查邮箱是否已被使用
+	existingAdmin, err := s.adminUserDAO.GetAdminUserByEmail(email)
+	if err != nil {
+		return errs.NewCommonError(errs.ErrInternal, "查询邮箱失败: "+err.Error())
+	}
+	if existingAdmin != nil && existingAdmin.AdminId != adminId {
+		return errs.NewCommonError(errs.ErrBadRequest, "该邮箱已被其他账号使用")
+	}
+
+	// 更新邮箱
+	if err := s.adminUserDAO.UpdateAdminUserEmail(adminId, email); err != nil {
+		return errs.NewCommonError(errs.ErrInternal, "更新邮箱失败: "+err.Error())
+	}
+
+	return nil
+}

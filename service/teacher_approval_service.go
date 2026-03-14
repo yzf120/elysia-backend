@@ -102,12 +102,7 @@ func (s *TeacherApprovalService) ApproveTeacher(approvalId, adminId string, appr
 		return errs.NewCommonError(errs.ErrBadRequest, "审批单不存在")
 	}
 
-	// 检查审批状态
-	if approval.ApprovalStatus != 0 {
-		return errs.NewCommonError(errs.ErrBadRequest, "该审批单已处理")
-	}
-
-	// 更新审批单状态
+	// 更新审批单状态（允许重新审批）
 	approvalUpdates := map[string]interface{}{
 		"approver_id":     adminId,
 		"approver_name":   admin.RealName,
@@ -125,19 +120,25 @@ func (s *TeacherApprovalService) ApproveTeacher(approvalId, adminId string, appr
 		return errs.NewCommonError(errs.ErrInternal, "更新审批单失败: "+err.Error())
 	}
 
-	// 如果审批通过，更新教师状态
-	if approved {
-		teacherUpdates := map[string]interface{}{
-			"verification_status": 1, // 已通过
-			"status":              1, // 激活账号
-			"verification_time":   time.Now(),
-			"verifier_id":         adminId,
-			"verification_remark": remark,
-		}
+	// 更新教师验证状态
+	teacherUpdates := map[string]interface{}{
+		"verification_time":   time.Now(),
+		"verifier_id":         adminId,
+		"verification_remark": remark,
+	}
 
-		if err := s.teacherDAO.UpdateTeacher(approval.TeacherId, teacherUpdates); err != nil {
-			return errs.NewCommonError(errs.ErrInternal, "更新教师状态失败: "+err.Error())
-		}
+	if approved {
+		// 审批通过：激活账号
+		teacherUpdates["verification_status"] = 1 // 已通过
+		teacherUpdates["status"] = 1              // 激活账号
+	} else {
+		// 审批驳回：标记为已驳回，保持账号禁用状态
+		teacherUpdates["verification_status"] = 2 // 已驳回
+		teacherUpdates["status"] = 0              // 禁用账号
+	}
+
+	if err := s.teacherDAO.UpdateTeacher(approval.TeacherId, teacherUpdates); err != nil {
+		return errs.NewCommonError(errs.ErrInternal, "更新教师状态失败: "+err.Error())
 	}
 
 	return nil

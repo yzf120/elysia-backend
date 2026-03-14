@@ -40,6 +40,9 @@ type AdminUserDAO interface {
 	// UpdateAdminUserPassword 更新管理员用户密码
 	UpdateAdminUserPassword(adminId string, password string) error
 
+	// UpdateAdminUserEmail 更新管理员用户邮箱
+	UpdateAdminUserEmail(adminId string, email string) error
+
 	// UpdateAdminUserLoginInfo 更新管理员用户登录信息
 	UpdateAdminUserLoginInfo(adminId, ipAddress string, loginTime time.Time) error
 
@@ -176,6 +179,13 @@ func (d *adminUserDAOImpl) UpdateAdminUserPassword(adminId string, password stri
 			"password":             password,
 			"password_update_time": time.Now(),
 		}).Error
+}
+
+// UpdateAdminUserEmail 更新管理员用户邮箱
+func (d *adminUserDAOImpl) UpdateAdminUserEmail(adminId string, email string) error {
+	return d.db.Model(&admin.AdminUser{}).
+		Where("admin_id = ?", adminId).
+		Update("email", email).Error
 }
 
 // UpdateAdminUserLoginInfo 更新管理员用户登录信息

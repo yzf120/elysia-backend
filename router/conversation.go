@@ -7,15 +7,23 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/yzf120/elysia-backend/authen"
 	agentpb "github.com/yzf120/elysia-backend/proto/agent"
 	"github.com/yzf120/elysia-backend/rpc"
+	agent_session "github.com/yzf120/elysia-session/proto/agent_session"
+	conversationpb "github.com/yzf120/elysia-session/proto/conversation"
 )
 
 // AIChatRequest AI对话请求（来自前端）
 type AIChatRequest struct {
+	// 会话ID（可选，首轮对话为空，后续对话传入）
+	SessionID string `json:"session_id,omitempty"`
+	// 题目ID（编程界面开启的对话时传入，普通对话不传或传0）
+	ProblemID int64 `json:"problem_id,omitempty"`
 	// 问题类型标识，如 "algorithm_problem" 表示算法题
 	QuestionType string `json:"question_type"`
 	// 题目信息（作为上下文传给AI）
@@ -56,6 +64,10 @@ func registerConversation(router *mux.Router) {
 	router.HandleFunc("/student/ai/chat", studentAIChatHandler).Methods("POST", "OPTIONS")
 	// 查询支持的模型列表
 	router.HandleFunc("/student/ai/models", studentAIModelsHandler).Methods("GET", "OPTIONS")
+	// 查询用户会话列表
+	router.HandleFunc("/student/ai/sessions", studentAISessionsHandler).Methods("GET", "OPTIONS")
+	// 查询某会话的消息列表
+	router.HandleFunc("/student/ai/sessions/{sessionId}/messages", studentAISessionMessagesHandler).Methods("GET", "OPTIONS")
 }
 
 // studentAIModelsHandler 查询支持的模型列表
@@ -197,6 +209,10 @@ func studentAIChatHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("[conversation] 开始接收 chat-agent 流式响应，学生: %s", studentId)
 
+	// 用于拼接完整的 AI 回复内容
+	var aiReplyBuilder strings.Builder
+	streamErr := false
+
 	// 逐个接收 chat-agent 的流式响应，通过 SSE 发送给前端
 	for {
 		chunk, err := agentStream.Recv()
@@ -210,7 +226,13 @@ func studentAIChatHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("[conversation] 接收 chat-agent 响应失败: %v", err)
 			fmt.Fprintf(w, "event: error\ndata: %s\n\n", err.Error())
 			flusher.Flush()
+			streamErr = true
 			break
+		}
+
+		// 累积 AI 回复内容
+		if chunk.Content != "" {
+			aiReplyBuilder.WriteString(chunk.Content)
 		}
 
 		// 将 chunk 序列化为 JSON 并通过 SSE 发送
@@ -239,6 +261,225 @@ func studentAIChatHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("[conversation] SSE 流式响应完成，学生: %s", studentId)
+
+	// ===== 异步存储会话和对话记录到 session 服务 =====
+	go func() {
+		// 确定 AI 最终回复内容（若流异常则使用兜底回复）
+		aiReply := aiReplyBuilder.String()
+		if streamErr || strings.TrimSpace(aiReply) == "" {
+			aiReply = "抱歉，AI 助教暂时无法回答，请稍后再试。"
+			log.Printf("[conversation] AI 回复异常，使用兜底回复，学生: %s", studentId)
+		}
+
+		// 取本次用户消息（messages 最后一条 role=user 的消息）
+		userMsg := ""
+		for i := len(request.Messages) - 1; i >= 0; i-- {
+			if request.Messages[i].Role == "user" {
+				userMsg = request.Messages[i].Content
+				break
+			}
+		}
+
+		sessionSvcCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		sessionID := request.SessionID
+		// 计算本轮 Q/A 的消息序号
+		// 已有消息数 = (len(request.Messages) - 1) 条历史 + 本次用户消息
+		// 本次用户消息 seq = 已有历史消息数 + 1（奇数）
+		// 本次 AI 回复 seq = 已有历史消息数 + 2（偶数）
+		historyCount := int32(len(request.Messages) - 1) // 不含本次用户消息
+		userSeq := historyCount + 1
+		aiSeq := historyCount + 2
+
+		if sessionID == "" {
+			// 首轮对话：创建新会话
+			sessionTitle := userMsg
+			if len([]rune(sessionTitle)) > 30 {
+				runes := []rune(sessionTitle)
+				sessionTitle = string(runes[:30]) + "..."
+			}
+			createRsp, err := rpc.GetSessionClient().CreateSession(sessionSvcCtx, &agent_session.CreateSessionRequest{
+				UserId:       studentId,
+				SessionTitle: sessionTitle,
+				ProblemId:    request.ProblemID,
+			})
+			if err != nil {
+				log.Printf("[conversation] 创建会话失败，学生: %s, err: %v", studentId, err)
+				return
+			}
+			if createRsp.Code != 200 {
+				log.Printf("[conversation] 创建会话返回错误，学生: %s, code: %d, msg: %s", studentId, createRsp.Code, createRsp.Message)
+				return
+			}
+			sessionID = createRsp.SessionId
+			log.Printf("[conversation] 创建会话成功，学生: %s, sessionID: %s", studentId, sessionID)
+		}
+
+		// 写入用户消息（奇数 seq）
+		_, err := rpc.GetSessionClient().CreateConversation(sessionSvcCtx, &conversationpb.CreateConversationRequest{
+			SessionId:   sessionID,
+			UserId:      studentId,
+			ModelId:     modelID,
+			MessageType: conversationpb.MessageType_MESSAGE_TYPE_TEXT,
+			SenderType:  conversationpb.SenderType_SENDER_TYPE_USER,
+			Content:     userMsg,
+			MessageSeq:  userSeq,
+		})
+		if err != nil {
+			log.Printf("[conversation] 写入用户消息失败，sessionID: %s, err: %v", sessionID, err)
+			return
+		}
+
+		// 写入 AI 回复（偶数 seq）
+		_, err = rpc.GetSessionClient().CreateConversation(sessionSvcCtx, &conversationpb.CreateConversationRequest{
+			SessionId:   sessionID,
+			UserId:      studentId,
+			ModelId:     modelID,
+			MessageType: conversationpb.MessageType_MESSAGE_TYPE_TEXT,
+			SenderType:  conversationpb.SenderType_SENDER_TYPE_AGENT,
+			Content:     aiReply,
+			MessageSeq:  aiSeq,
+		})
+		if err != nil {
+			log.Printf("[conversation] 写入 AI 回复失败，sessionID: %s, err: %v", sessionID, err)
+			return
+		}
+
+		log.Printf("[conversation] 会话记录存储完成，sessionID: %s, userSeq: %d, aiSeq: %d", sessionID, userSeq, aiSeq)
+	}()
+}
+
+// studentAISessionsHandler 获取用户AI会话列表
+// GET /student/ai/sessions?page=1&page_size=20&problem_id=0
+func studentAISessionsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "OPTIONS" {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	ctx := r.Context()
+	studentId, ok := authen.GetRoleIDFromContext(ctx)
+	if !ok || studentId == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": map[string]interface{}{"code": 401, "message": "未授权"},
+			"data":  nil,
+		})
+		return
+	}
+
+	// 解析分页参数
+	page := int32(1)
+	pageSize := int32(20)
+	if p := r.URL.Query().Get("page"); p != "" {
+		if v, err := fmt.Sscanf(p, "%d", &page); v == 0 || err != nil {
+			page = 1
+		}
+	}
+	if ps := r.URL.Query().Get("page_size"); ps != "" {
+		if v, err := fmt.Sscanf(ps, "%d", &pageSize); v == 0 || err != nil {
+			pageSize = 20
+		}
+	}
+
+	svcCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := rpc.GetSessionClient().ListSessionsByUser(svcCtx, &agent_session.ListSessionsByUserRequest{
+		UserId:   studentId,
+		Page:     page,
+		PageSize: pageSize,
+	})
+	if err != nil {
+		log.Printf("[conversation] 获取会话列表失败，学生: %s, err: %v", studentId, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": map[string]interface{}{"code": 500, "message": "获取会话列表失败"},
+			"data":  nil,
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"error": map[string]interface{}{"code": 0},
+		"data":  resp,
+	})
+}
+
+// studentAISessionMessagesHandler 获取某会话的消息列表
+// GET /student/ai/sessions/{sessionId}/messages?page=1&page_size=100
+func studentAISessionMessagesHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "OPTIONS" {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	ctx := r.Context()
+	studentId, ok := authen.GetRoleIDFromContext(ctx)
+	if !ok || studentId == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": map[string]interface{}{"code": 401, "message": "未授权"},
+			"data":  nil,
+		})
+		return
+	}
+
+	vars := mux.Vars(r)
+	sessionId := vars["sessionId"]
+	if sessionId == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": map[string]interface{}{"code": 400, "message": "sessionId 不能为空"},
+			"data":  nil,
+		})
+		return
+	}
+
+	page := int32(1)
+	pageSize := int32(100)
+	if p := r.URL.Query().Get("page"); p != "" {
+		fmt.Sscanf(p, "%d", &page)
+	}
+	if ps := r.URL.Query().Get("page_size"); ps != "" {
+		fmt.Sscanf(ps, "%d", &pageSize)
+	}
+
+	svcCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := rpc.GetSessionClient().ListConversations(svcCtx, &conversationpb.ListConversationsRequest{
+		SessionId: sessionId,
+		Page:      page,
+		PageSize:  pageSize,
+	})
+	if err != nil {
+		log.Printf("[conversation] 获取会话消息失败，sessionId: %s, err: %v", sessionId, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": map[string]interface{}{"code": 500, "message": "获取会话消息失败"},
+			"data":  nil,
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"error": map[string]interface{}{"code": 0},
+		"data":  resp,
+	})
 }
 
 // buildSystemPrompt 根据问题类型和题目信息构建系统提示词

@@ -35,6 +35,12 @@ func registerAdmin(publicRouter *mux.Router, protectedRouter *mux.Router) {
 	protectedRouter.HandleFunc("/admin/list", listAdminUsersHandler).Methods("POST")
 	protectedRouter.HandleFunc("/admin/update-password", updateAdminUserPasswordHandler).Methods("POST")
 	protectedRouter.HandleFunc("/admin/update-status", updateAdminUserStatusHandler).Methods("POST")
+
+	// 管理员个人信息相关接口（需要认证）
+	protectedRouter.HandleFunc("/admin/profile", getAdminProfileHandler).Methods("GET")
+	protectedRouter.HandleFunc("/admin/profile/password", updateAdminPasswordHandler).Methods("POST")
+	protectedRouter.HandleFunc("/admin/profile/email", updateAdminEmailHandler).Methods("POST")
+	protectedRouter.HandleFunc("/admin/auth/logout", adminLogoutHandler).Methods("POST")
 }
 
 // createAdminUserHandler 创建管理员用户处理器
@@ -341,5 +347,128 @@ func adminLoginWithPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		"message":   "登录成功",
 		"user_info": admin,
 		"token":     token,
+	})
+}
+
+// ==================== 管理员个人信息处理器函数 ====================
+
+// getAdminProfileHandler 获取当前管理员个人信息
+func getAdminProfileHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	setResponseHeaders(w)
+
+	// 从上下文获取管理员ID
+	adminId, ok := ctx.Value("admin_id").(string)
+	if !ok || adminId == "" {
+		writeErrorResponse(w, http.StatusUnauthorized, "未授权")
+		return
+	}
+
+	request := &adminPb.GetAdminUserRequest{
+		AdminId: adminId,
+	}
+
+	// 调用服务
+	resp, err := adminUserService.GetAdminUser(ctx, request)
+	if err != nil || resp.Code != consts.SuccessCode {
+		msg := "查询失败"
+		if resp != nil {
+			msg = resp.Message
+		}
+		writeErrorResponse(w, http.StatusInternalServerError, msg)
+		return
+	}
+
+	writeSuccessResponse(w, map[string]interface{}{
+		"message":   "查询成功",
+		"user_info": resp.AdminUser,
+	})
+}
+
+// updateAdminPasswordHandler 更新当前管理员密码
+func updateAdminPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	setResponseHeaders(w)
+
+	// 从上下文获取管理员ID
+	adminId, ok := ctx.Value("admin_id").(string)
+	if !ok || adminId == "" {
+		writeErrorResponse(w, http.StatusUnauthorized, "未授权")
+		return
+	}
+
+	// 解析请求体
+	var reqBody struct {
+		OldPassword string `json:"old_password"`
+		NewPassword string `json:"new_password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+
+	request := &adminPb.UpdateAdminUserPasswordRequest{
+		AdminId:     adminId,
+		OldPassword: reqBody.OldPassword,
+		NewPassword: reqBody.NewPassword,
+	}
+
+	// 调用服务
+	resp, err := adminUserService.UpdateAdminUserPassword(ctx, request)
+	if err != nil || resp.Code != consts.SuccessCode {
+		msg := "修改失败"
+		if resp != nil {
+			msg = resp.Message
+		}
+		writeErrorResponse(w, http.StatusBadRequest, msg)
+		return
+	}
+
+	writeSuccessResponse(w, map[string]interface{}{
+		"message": "密码修改成功，请重新登录",
+	})
+}
+
+// updateAdminEmailHandler 更新当前管理员邮箱
+func updateAdminEmailHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	setResponseHeaders(w)
+
+	// 从上下文获取管理员ID
+	adminId, ok := ctx.Value("admin_id").(string)
+	if !ok || adminId == "" {
+		writeErrorResponse(w, http.StatusUnauthorized, "未授权")
+		return
+	}
+
+	// 解析请求体
+	var reqBody struct {
+		Email string `json:"email"`
+		Code  string `json:"code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+
+	// TODO: 验证邮箱验证码
+	// 此处简化处理，直接调用更新邮箱服务
+	if err := adminAuthService.UpdateAdminEmail(ctx, adminId, reqBody.Email); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	writeSuccessResponse(w, map[string]interface{}{
+		"message": "邮箱绑定成功",
+	})
+}
+
+// adminLogoutHandler 管理员退出登录
+func adminLogoutHandler(w http.ResponseWriter, r *http.Request) {
+	setResponseHeaders(w)
+
+	// 当前简单实现，客户端自行清除token
+	writeSuccessResponse(w, map[string]interface{}{
+		"message": "退出成功",
 	})
 }

@@ -37,6 +37,9 @@ func main() {
 	// 初始化 chat-agent RPC 客户端
 	rpc.InitAgentClient()
 
+	// 初始化 session 服务 HTTP 客户端
+	rpc.InitSessionClient()
+
 	r := mux.NewRouter()
 
 	// 初始化路由器（必须在RegisterRouter之前调用，以初始化Service实例）
