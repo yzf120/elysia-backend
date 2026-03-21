@@ -30,6 +30,8 @@ func Init() {
 	platformContentService = service.NewPlatformContentService()
 	adminUserManagementService = service.NewAdminUserManagementService()
 	teacherApprovalService = service_impl.NewTeacherApprovalServiceImpl()
+	contentModerationService = service.NewContentModerationService()
+	intentService = service.NewIntentService()
 }
 
 func RegisterRouter(router *mux.Router) {
@@ -56,6 +58,9 @@ func registerApiRouters(publicRouter *mux.Router, protectedRouter *mux.Router) {
 
 	// 登出接口（虽然是认证相关，但需要认证后才能登出，所以注册到受保护路由）
 	registerLogout(protectedRouter)
+
+	// 收藏相关
+	registerFavorite(protectedRouter)
 
 	// 对话相关
 	registerConversation(protectedRouter)
@@ -85,6 +90,12 @@ func registerApiRouters(publicRouter *mux.Router, protectedRouter *mux.Router) {
 
 	// 管理员用户管理接口
 	RegisterAdminUserManagementRoutes(protectedRouter)
+
+	// 意图管理接口（管理员）
+	RegisterIntentRoutes(protectedRouter)
+
+	// Dashboard监控接口（管理员）
+	RegisterDashboardRoutes(protectedRouter)
 
 }
 

@@ -3,7 +3,10 @@ package rsp
 // StudentInfo 学生信息
 type StudentInfo struct {
 	StudentId        string   `json:"student_id"`        // 学生ID
+	StudentName      string   `json:"student_name"`      // 姓名
 	StudentNumber    string   `json:"student_number"`    // 学号
+	PhoneNumber      string   `json:"phone_number"`      // 手机号
+	Email            string   `json:"email"`             // 邮箱
 	Major            string   `json:"major"`             // 专业
 	Grade            string   `json:"grade"`             // 年级
 	ProgrammingLevel string   `json:"programming_level"` // 编程基础

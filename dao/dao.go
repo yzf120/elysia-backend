@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/yzf120/elysia-backend/config"
+	"github.com/yzf120/elysia-backend/model/content_security"
+	"github.com/yzf120/elysia-backend/model/intent"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -49,7 +51,23 @@ func InitDB() error {
 
 	log.Printf("数据库连接成功: %s@%s:%s/%s",
 		cfg.Database.User, cfg.Database.Host, cfg.Database.Port, cfg.Database.Name)
+
+	// 自动迁移表结构
+	if err := autoMigrate(); err != nil {
+		return fmt.Errorf("自动迁移表结构失败: %v", err)
+	}
+
 	return nil
+}
+
+// autoMigrate 自动迁移表结构
+func autoMigrate() error {
+	return DB.AutoMigrate(
+		&content_security.ViolationRecord{},
+		&intent.IntentDict{},
+		&intent.IntentPromptTemplate{},
+		&intent.UserIntentRecord{},
+	)
 }
 
 // CloseDB 关闭数据库连接

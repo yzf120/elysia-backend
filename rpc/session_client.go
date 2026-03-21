@@ -70,3 +70,23 @@ func (c *SessionClient) ListSessionsByUser(ctx context.Context, req *agent_sessi
 func (c *SessionClient) ListConversations(ctx context.Context, req *conversation.ListConversationsRequest) (*conversation.ListConversationsResponse, error) {
 	return c.conversationProxy.ListConversations(ctx, req)
 }
+
+// FavoriteSession 收藏会话
+func (c *SessionClient) FavoriteSession(ctx context.Context, req *agent_session.FavoriteSessionRequest) (*agent_session.FavoriteSessionResponse, error) {
+	return c.agentSessionProxy.FavoriteSession(ctx, req)
+}
+
+// UnfavoriteSession 取消收藏会话
+func (c *SessionClient) UnfavoriteSession(ctx context.Context, req *agent_session.UnfavoriteSessionRequest) (*agent_session.UnfavoriteSessionResponse, error) {
+	return c.agentSessionProxy.UnfavoriteSession(ctx, req)
+}
+
+// ListFavoriteSessions 获取收藏会话列表
+func (c *SessionClient) ListFavoriteSessions(ctx context.Context, req *agent_session.ListFavoriteSessionsRequest) (*agent_session.ListFavoriteSessionsResponse, error) {
+	return c.agentSessionProxy.ListFavoriteSessions(ctx, req)
+}
+
+// CheckFavorite 检查收藏状态
+func (c *SessionClient) CheckFavorite(ctx context.Context, req *agent_session.CheckFavoriteRequest) (*agent_session.CheckFavoriteResponse, error) {
+	return c.agentSessionProxy.CheckFavorite(ctx, req)
+}

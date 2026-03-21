@@ -73,7 +73,10 @@ func (s *StudentServiceImpl) GetStudent(ctx context.Context, req *req.GetStudent
 
 	studentInfo := &rsp.StudentInfo{
 		StudentId:        student.StudentId,
+		StudentName:      student.StudentName,
 		StudentNumber:    student.StudentNumber,
+		PhoneNumber:      student.PhoneNumber,
+		Email:            student.Email,
 		Major:            student.Major,
 		Grade:            student.Grade,
 		ProgrammingLevel: student.ProgrammingLevel,
@@ -96,6 +99,12 @@ func (s *StudentServiceImpl) GetStudent(ctx context.Context, req *req.GetStudent
 func (s *StudentServiceImpl) UpdateStudent(ctx context.Context, req *req.UpdateStudentRequest) (*rsp.UpdateStudentResponse, error) {
 	// 构建更新字段
 	updates := make(map[string]interface{})
+	if req.Name != "" {
+		updates["student_name"] = req.Name
+	}
+	if req.Email != "" {
+		updates["email"] = req.Email
+	}
 	if req.Major != "" {
 		updates["major"] = req.Major
 	}
@@ -186,7 +195,10 @@ func (s *StudentServiceImpl) ListStudents(ctx context.Context, req *req.ListStud
 
 		studentInfos = append(studentInfos, &rsp.StudentInfo{
 			StudentId:        student.StudentId,
+			StudentName:      student.StudentName,
 			StudentNumber:    student.StudentNumber,
+			PhoneNumber:      student.PhoneNumber,
+			Email:            student.Email,
 			Major:            student.Major,
 			Grade:            student.Grade,
 			ProgrammingLevel: student.ProgrammingLevel,

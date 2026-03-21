@@ -40,6 +40,12 @@ func main() {
 	// 初始化 session 服务 HTTP 客户端
 	rpc.InitSessionClient()
 
+	// 初始化 access 内容安全审核客户端
+	rpc.InitAccessClient()
+
+	// 初始化 llm-tool RPC 客户端
+	rpc.InitLLMToolClient()
+
 	r := mux.NewRouter()
 
 	// 初始化路由器（必须在RegisterRouter之前调用，以初始化Service实例）

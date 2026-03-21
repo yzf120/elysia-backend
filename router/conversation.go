@@ -2,6 +2,7 @@ package router
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,9 +15,19 @@ import (
 	"github.com/yzf120/elysia-backend/authen"
 	agentpb "github.com/yzf120/elysia-backend/proto/agent"
 	"github.com/yzf120/elysia-backend/rpc"
+	"github.com/yzf120/elysia-backend/service"
 	agent_session "github.com/yzf120/elysia-session/proto/agent_session"
 	conversationpb "github.com/yzf120/elysia-session/proto/conversation"
 )
+
+// 内容审核服务（在 router.Init() 中初始化）
+var contentModerationService *service.ContentModerationService
+
+// AI回复兜底文案（当AI回复违规时返回给用户）
+const aiViolationFallbackReply = "抱歉，AI生成的回复内容不适合展示。请尝试换一种方式提问，或联系管理员。"
+
+// 用户被封禁时的提示
+const userBannedMessage = "您因多次发送违规内容，AI对话功能已被禁止使用。如有疑问请联系管理员。"
 
 // AIChatRequest AI对话请求（来自前端）
 type AIChatRequest struct {
@@ -135,6 +146,86 @@ func studentAIChatHandler(w http.ResponseWriter, r *http.Request) {
 	if len(request.Messages) == 0 {
 		http.Error(w, "messages 不能为空", http.StatusBadRequest)
 		return
+	}
+
+	// 确定用户角色
+	userRole := "student"
+	if strings.HasPrefix(studentId, "tea_") {
+		userRole = "teacher"
+	}
+
+	// ===== 1. 检查用户是否因违规被封禁 =====
+	banned, violationCount, err := contentModerationService.IsUserBanned(studentId)
+	if err != nil {
+		log.Printf("[conversation] 检查用户封禁状态失败，学生: %s, err: %v", studentId, err)
+		// 查询失败时不阻断，继续处理
+	} else if banned {
+		log.Printf("[conversation] 用户已被封禁，学生: %s, 违规次数: %d", studentId, violationCount)
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": map[string]interface{}{"code": 4031, "message": userBannedMessage},
+			"data":  map[string]interface{}{"violation_count": violationCount},
+		})
+		return
+	}
+
+	// ===== 2. 同步审核用户消息（Q） =====
+	userMsg := ""
+	for i := len(request.Messages) - 1; i >= 0; i-- {
+		if request.Messages[i].Role == "user" {
+			userMsg = request.Messages[i].Content
+			break
+		}
+	}
+
+	if userMsg != "" {
+		moderateCtx, moderateCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer moderateCancel()
+
+		// 文本审核
+		pureText := stripImageContent(userMsg)
+		if strings.TrimSpace(pureText) != "" {
+			textResult, err := contentModerationService.ModerateText(moderateCtx, studentId, userRole, request.SessionID, "user", pureText)
+			if err != nil {
+				log.Printf("[conversation] 用户消息文本审核异常，学生: %s, err: %v", studentId, err)
+			} else if !textResult.Passed {
+				// 用户消息违规，返回警示，不调用AI
+				log.Printf("[conversation] 用户消息违规被拦截，学生: %s, label: %s", studentId, textResult.Label)
+				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("Access-Control-Allow-Origin", "*")
+				w.WriteHeader(http.StatusOK)
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"error": map[string]interface{}{"code": 4032, "message": textResult.Message},
+					"data":  map[string]interface{}{"blocked": true, "label": textResult.Label},
+				})
+				return
+			}
+		}
+
+		// 图片审核
+		imageURLs := extractImageURLs(userMsg)
+		for i, imgURL := range imageURLs {
+			imgReq := buildImageModerationRequest(imgURL, studentId, request.SessionID)
+			if imgReq == nil {
+				continue
+			}
+			imgResult, err := contentModerationService.ModerateImage(moderateCtx, studentId, userRole, request.SessionID, "user", imgReq)
+			if err != nil {
+				log.Printf("[conversation] 用户消息图片#%d审核异常，学生: %s, err: %v", i+1, studentId, err)
+			} else if !imgResult.Passed {
+				log.Printf("[conversation] 用户消息图片#%d违规被拦截，学生: %s, label: %s", i+1, studentId, imgResult.Label)
+				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("Access-Control-Allow-Origin", "*")
+				w.WriteHeader(http.StatusOK)
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"error": map[string]interface{}{"code": 4032, "message": "您发送的图片包含违规内容，已被系统拦截。请规范用语，多次违规将被禁止使用AI对话功能。"},
+					"data":  map[string]interface{}{"blocked": true, "label": imgResult.Label},
+				})
+				return
+			}
+		}
 	}
 
 	// 设置 SSE 响应头
@@ -262,23 +353,37 @@ func studentAIChatHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("[conversation] SSE 流式响应完成，学生: %s", studentId)
 
-	// ===== 异步存储会话和对话记录到 session 服务 =====
-	go func() {
-		// 确定 AI 最终回复内容（若流异常则使用兜底回复）
-		aiReply := aiReplyBuilder.String()
-		if streamErr || strings.TrimSpace(aiReply) == "" {
-			aiReply = "抱歉，AI 助教暂时无法回答，请稍后再试。"
-			log.Printf("[conversation] AI 回复异常，使用兜底回复，学生: %s", studentId)
-		}
+	// ===== 3. 同步审核 AI 回复（A），然后异步存储 =====
+	aiReply := aiReplyBuilder.String()
+	if streamErr || strings.TrimSpace(aiReply) == "" {
+		aiReply = "抱歉，AI 助教暂时无法回答，请稍后再试。"
+		log.Printf("[conversation] AI 回复异常，使用兜底回复，学生: %s", studentId)
+	}
 
-		// 取本次用户消息（messages 最后一条 role=user 的消息）
-		userMsg := ""
-		for i := len(request.Messages) - 1; i >= 0; i-- {
-			if request.Messages[i].Role == "user" {
-				userMsg = request.Messages[i].Content
-				break
+	// 审核 AI 回复内容
+	if strings.TrimSpace(aiReply) != "" {
+		aiModerateCtx, aiModerateCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer aiModerateCancel()
+
+		aiPureText := stripImageContent(aiReply)
+		if strings.TrimSpace(aiPureText) != "" {
+			aiTextResult, err := contentModerationService.ModerateText(aiModerateCtx, studentId, userRole, request.SessionID, "ai", aiPureText)
+			if err != nil {
+				log.Printf("[conversation] AI回复文本审核异常，学生: %s, err: %v", studentId, err)
+			} else if !aiTextResult.Passed {
+				// AI回复违规，替换为兜底文案
+				log.Printf("[conversation] AI回复违规，使用兜底文案，学生: %s, label: %s", studentId, aiTextResult.Label)
+				// 通过 SSE 补发一条违规提示事件
+				fmt.Fprintf(w, "event: ai_violation\ndata: %s\n\n", aiViolationFallbackReply)
+				flusher.Flush()
+				// 存储时使用兜底文案
+				aiReply = aiViolationFallbackReply
 			}
 		}
+	}
+
+	// ===== 异步存储会话和对话记录到 session 服务 =====
+	go func() {
 
 		sessionSvcCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -480,6 +585,81 @@ func studentAISessionMessagesHandler(w http.ResponseWriter, r *http.Request) {
 		"error": map[string]interface{}{"code": 0},
 		"data":  resp,
 	})
+}
+
+// buildImageModerationRequest 根据图片URL构建图片审核请求
+func buildImageModerationRequest(imgURL, userId, sessionId string) *rpc.ImageModerationRequest {
+	imgReq := &rpc.ImageModerationRequest{
+		BizType: "default",
+		UserId:  userId,
+		DataId:  sessionId,
+	}
+
+	if strings.HasPrefix(imgURL, "http") {
+		imgReq.FileUrl = imgURL
+	} else if strings.HasPrefix(imgURL, "data:image/") {
+		parts := strings.SplitN(imgURL, ",", 2)
+		if len(parts) == 2 {
+			decoded, err := base64Decode(parts[1])
+			if err != nil {
+				log.Printf("[ContentModeration] 图片base64解码失败，userId: %s, err: %v", userId, err)
+				return nil
+			}
+			imgReq.FileContent = decoded
+		}
+	} else {
+		return nil
+	}
+
+	if imgReq.FileUrl == "" && len(imgReq.FileContent) == 0 {
+		return nil
+	}
+
+	return imgReq
+}
+
+// extractImageURLs 从消息内容中提取图片URL
+// 支持格式：[IMAGE:data:image/...;base64,...] 和 [IMAGE:https://...]
+func extractImageURLs(content string) []string {
+	const imagePrefix = "[IMAGE:"
+	const imageSuffix = "]"
+
+	var urls []string
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, imagePrefix) && strings.HasSuffix(line, imageSuffix) {
+			url := line[len(imagePrefix) : len(line)-len(imageSuffix)]
+			if url != "" {
+				urls = append(urls, url)
+			}
+		}
+	}
+	return urls
+}
+
+// stripImageContent 从消息内容中剥离图片数据，只保留纯文本
+// 将 [IMAGE:...] 格式的行移除，返回纯文本内容
+func stripImageContent(content string) string {
+	const imagePrefix = "[IMAGE:"
+	const imageSuffix = "]"
+
+	var textLines []string
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		// 跳过图片行
+		if strings.HasPrefix(trimmed, imagePrefix) && strings.HasSuffix(trimmed, imageSuffix) {
+			continue
+		}
+		textLines = append(textLines, line)
+	}
+	return strings.Join(textLines, "\n")
+}
+
+// base64Decode 解码 base64 字符串为原始字节
+func base64Decode(s string) ([]byte, error) {
+	return base64.StdEncoding.DecodeString(s)
 }
 
 // buildSystemPrompt 根据问题类型和题目信息构建系统提示词
