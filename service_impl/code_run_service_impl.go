@@ -154,3 +154,35 @@ func (s *CodeRunServiceImpl) ListTeacherCodeRunRecords(ctx context.Context, teac
 		Records: results,
 	}, nil
 }
+
+// CheckCodeSyntax 代码语法检查（仅编译，不运行）
+func (s *CodeRunServiceImpl) CheckCodeSyntax(ctx context.Context, request *codeReq.CodeCheckRequest) (*codeRsp.CodeCheckResponse, error) {
+	hasError, diagnostics, err := s.codeRunService.CheckCodeSyntax(request.Language, request.Code)
+	if err != nil {
+		code, msg := errs.ParseCommonError(err.Error())
+		return &codeRsp.CodeCheckResponse{
+			Code:    int32(code),
+			Message: msg,
+		}, nil
+	}
+
+	// 转换诊断信息
+	rspDiagnostics := make([]*codeRsp.Diagnostic, 0, len(diagnostics))
+	for _, d := range diagnostics {
+		rspDiagnostics = append(rspDiagnostics, &codeRsp.Diagnostic{
+			Line:      d.Line,
+			Column:    d.Column,
+			EndLine:   d.EndLine,
+			EndColumn: d.EndColumn,
+			Severity:  d.Severity,
+			Message:   d.Message,
+		})
+	}
+
+	return &codeRsp.CodeCheckResponse{
+		Code:        consts.SuccessCode,
+		Message:     "语法检查完成",
+		HasError:    hasError,
+		Diagnostics: rspDiagnostics,
+	}, nil
+}

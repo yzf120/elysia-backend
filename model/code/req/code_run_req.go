@@ -13,3 +13,9 @@ type CodeRunRequest struct {
 type GetCodeRunResultRequest struct {
 	RunId int64 `json:"run_id"` // 运行记录ID
 }
+
+// CodeCheckRequest 代码语法检查请求（仅编译，不运行）
+type CodeCheckRequest struct {
+	Language string `json:"language"` // 语言：python/java/go/cpp/c
+	Code     string `json:"code"`     // 用户代码
+}

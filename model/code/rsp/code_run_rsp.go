@@ -34,3 +34,21 @@ type ListCodeRunRecordsResponse struct {
 	Message string           `json:"message"`
 	Records []*CodeRunResult `json:"records"`
 }
+
+// CodeCheckResponse 代码语法检查响应
+type CodeCheckResponse struct {
+	Code        int32         `json:"code"`
+	Message     string        `json:"message"`
+	HasError    bool          `json:"has_error"`    // 是否有编译错误
+	Diagnostics []*Diagnostic `json:"diagnostics"`  // 错误诊断列表
+}
+
+// Diagnostic 单条编译错误诊断信息
+type Diagnostic struct {
+	Line      int    `json:"line"`       // 错误行号（从1开始）
+	Column    int    `json:"column"`     // 错误列号（从1开始）
+	EndLine   int    `json:"end_line"`   // 错误结束行号
+	EndColumn int    `json:"end_column"` // 错误结束列号
+	Severity  string `json:"severity"`   // 错误级别：error / warning
+	Message   string `json:"message"`    // 错误信息
+}

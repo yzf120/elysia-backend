@@ -24,11 +24,13 @@ func registerCodeRun(protectedRouter *mux.Router) {
 	protectedRouter.HandleFunc("/student/code/result", getCodeRunResultHandler).Methods("GET")
 	protectedRouter.HandleFunc("/student/code/records", listCodeRunRecordsHandler).Methods("GET")
 	protectedRouter.HandleFunc("/student/code/progress", getCodeProgressHandler).Methods("GET")
+	protectedRouter.HandleFunc("/student/code/check", checkCodeSyntaxHandler).Methods("POST") // 语法检查
 
 	// 教师端（复用代码执行引擎，独立接口路径）
 	protectedRouter.HandleFunc("/teacher/code/run", teacherSubmitCodeRunHandler).Methods("POST")
 	protectedRouter.HandleFunc("/teacher/code/result", getCodeRunResultHandler).Methods("GET") // 复用查询结果
 	protectedRouter.HandleFunc("/teacher/code/records", teacherListCodeRunRecordsHandler).Methods("GET")
+	protectedRouter.HandleFunc("/teacher/code/check", checkCodeSyntaxHandler).Methods("POST") // 教师端也可用语法检查
 }
 
 // submitCodeRunHandler 提交代码运行任务处理器
@@ -352,5 +354,57 @@ func teacherListCodeRunRecordsHandler(w http.ResponseWriter, r *http.Request) {
 
 	writeSuccessResponse(w, map[string]interface{}{
 		"records": resp.Records,
+	})
+}
+
+// checkCodeSyntaxHandler 代码语法检查处理器（仅编译，不运行）
+func checkCodeSyntaxHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	setResponseHeaders(w)
+
+	request := &codeReq.CodeCheckRequest{}
+	if err := json.NewDecoder(r.Body).Decode(request); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+
+	if request.Code == "" {
+		writeSuccessResponse(w, map[string]interface{}{
+			"has_error":   false,
+			"diagnostics": []interface{}{},
+		})
+		return
+	}
+	if request.Language == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "language 不能为空")
+		return
+	}
+
+	resp, err := codeRunService.CheckCodeSyntax(ctx, request)
+	if err != nil {
+		errResp := &errs.BaseResponse{
+			Data:  nil,
+			Error: errs.NewError(http.StatusInternalServerError, err.Error()),
+		}
+		respBytes, _ := json.Marshal(errResp)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(respBytes)
+		return
+	}
+
+	if resp.Code != 0 {
+		errResp := &errs.BaseResponse{
+			Data:  nil,
+			Error: errs.NewError(int(resp.Code), resp.Message),
+		}
+		respBytes, _ := json.Marshal(errResp)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(respBytes)
+		return
+	}
+
+	writeSuccessResponse(w, map[string]interface{}{
+		"has_error":   resp.HasError,
+		"diagnostics": resp.Diagnostics,
 	})
 }

@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -437,6 +438,451 @@ func (s *CodeRunService) executeCode(runId int64, p *problem.Problem, language, 
 		"time_cost":   totalTimeCost,
 		"memory_used": maxMemoryUsed,
 	})
+}
+
+// CheckCodeSyntax 仅编译代码检查语法错误（不运行），返回编译诊断信息
+func (s *CodeRunService) CheckCodeSyntax(language, code string) (bool, []CompileDiagnostic, error) {
+	cfg, ok := langConfigs[language]
+	if !ok {
+		return false, nil, errs.NewCommonError(errs.ErrBadRequest, "不支持的编程语言: "+language)
+	}
+
+	// 创建临时目录
+	tmpDir, err := os.MkdirTemp("", "elysia_check_*")
+	if err != nil {
+		return false, nil, errs.NewCommonError(errs.ErrInternal, "创建临时目录失败")
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// 写入源代码文件
+	srcFile := filepath.Join(tmpDir, cfg.FileName)
+	if err := os.WriteFile(srcFile, []byte(code), 0644); err != nil {
+		return false, nil, errs.NewCommonError(errs.ErrInternal, "写入代码文件失败")
+	}
+
+	// Python 是解释型语言，使用 py_compile 检查语法
+	if language == "python" {
+		return s.checkPythonSyntax(tmpDir, cfg.FileName)
+	}
+
+	// 编译型语言：执行编译命令
+	if cfg.CompileCmd == nil {
+		// 无编译命令（理论上不会到这里，Python 已在上面处理）
+		return false, nil, nil
+	}
+
+	compileCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	compileCmd := exec.CommandContext(compileCtx, cfg.CompileCmd[0], cfg.CompileCmd[1:]...)
+	compileCmd.Dir = tmpDir
+	compileCmd.Env = buildEnv()
+	var compileErr bytes.Buffer
+	compileCmd.Stderr = &compileErr
+
+	if err := compileCmd.Run(); err != nil {
+		// 编译失败，解析错误信息
+		errStr := compileErr.String()
+		diagnostics := parseCompileErrors(errStr, language, cfg.FileName)
+		return true, diagnostics, nil
+	}
+
+	// 编译成功，无错误
+	return false, nil, nil
+}
+
+// CompileDiagnostic 编译诊断信息
+type CompileDiagnostic struct {
+	Line      int    `json:"line"`
+	Column    int    `json:"column"`
+	EndLine   int    `json:"end_line"`
+	EndColumn int    `json:"end_column"`
+	Severity  string `json:"severity"` // error / warning
+	Message   string `json:"message"`
+}
+
+// checkPythonSyntax 使用 pyflakes（优先）或 py_compile 检查 Python 语法
+// pyflakes 可以一次性报告多处错误，py_compile 只能报告第一处
+func (s *CodeRunService) checkPythonSyntax(tmpDir, fileName string) (bool, []CompileDiagnostic, error) {
+	checkCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// 优先尝试 pyflakes（能报告多处错误）
+	pyflakesCmd := exec.CommandContext(checkCtx, "pyflakes", fileName)
+	pyflakesCmd.Dir = tmpDir
+	pyflakesCmd.Env = buildEnv()
+	var pyflakesStdout, pyflakesStderr bytes.Buffer
+	pyflakesCmd.Stdout = &pyflakesStdout
+	pyflakesCmd.Stderr = &pyflakesStderr
+
+	if err := pyflakesCmd.Run(); err != nil {
+		// pyflakes 发现错误（exit code != 0）
+		errOutput := pyflakesStdout.String() + pyflakesStderr.String()
+		diagnostics := parsePyflakesErrors(errOutput, fileName)
+		if len(diagnostics) > 0 {
+			return true, diagnostics, nil
+		}
+		// pyflakes 可能未安装（command not found），回退到 py_compile
+	}
+
+	// pyflakes 无错误或不可用，回退到 py_compile
+	checkCtx2, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel2()
+	cmd := exec.CommandContext(checkCtx2, "python3", "-m", "py_compile", fileName)
+	cmd.Dir = tmpDir
+	cmd.Env = buildEnv()
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		errStr := stderr.String()
+		diagnostics := parsePythonErrors(errStr, fileName)
+		if len(diagnostics) == 0 {
+			// 无法解析具体行号，返回编译器原始输出
+			diagnostics = append(diagnostics, CompileDiagnostic{
+				Line:      1,
+				Column:    1,
+				EndLine:   1,
+				EndColumn: 1,
+				Severity:  "error",
+				Message:   strings.TrimSpace(errStr),
+			})
+		}
+		return true, diagnostics, nil
+	}
+
+	return false, nil, nil
+}
+
+// parsePyflakesErrors 解析 pyflakes 错误输出（支持多处错误）
+// 格式示例：
+//   main.py:3:1 'os' imported but unused
+//   main.py:5:5 undefined name 'foo'
+func parsePyflakesErrors(errStr, fileName string) []CompileDiagnostic {
+	var diagnostics []CompileDiagnostic
+	baseName := filepath.Base(fileName)
+	lines := strings.Split(errStr, "\n")
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || !strings.Contains(line, baseName) {
+			continue
+		}
+
+		// 格式：filename:line:col message 或 filename:line: message
+		idx := strings.Index(line, baseName+":")
+		if idx < 0 {
+			continue
+		}
+		rest := line[idx+len(baseName)+1:]
+
+		// 尝试解析 line:col message
+		parts := strings.SplitN(rest, ":", 3)
+		if len(parts) < 2 {
+			continue
+		}
+
+		lineNum, err := strconv.Atoi(strings.TrimSpace(parts[0]))
+		if err != nil {
+			continue
+		}
+
+		colNum := 1
+		message := ""
+		if len(parts) >= 3 {
+			if n, err := strconv.Atoi(strings.TrimSpace(parts[1])); err == nil {
+				colNum = n
+				message = strings.TrimSpace(parts[2])
+			} else {
+				message = strings.TrimSpace(parts[1] + ":" + parts[2])
+			}
+		} else {
+			message = strings.TrimSpace(parts[1])
+		}
+
+		if message == "" {
+			continue
+		}
+
+		// pyflakes 的 "invalid syntax" 等是 error，其他（如 unused import）是 warning
+		severity := "warning"
+		if strings.Contains(strings.ToLower(message), "syntax") ||
+			strings.Contains(strings.ToLower(message), "undefined") ||
+			strings.Contains(strings.ToLower(message), "invalid") {
+			severity = "error"
+		}
+
+		diagnostics = append(diagnostics, CompileDiagnostic{
+			Line:      lineNum,
+			Column:    colNum,
+			EndLine:   lineNum,
+			EndColumn: colNum,
+			Severity:  severity,
+			Message:   message,
+		})
+	}
+	return diagnostics
+}
+
+// parsePythonErrors 解析 py_compile 的 Python 编译错误输出
+// 格式示例：
+//   File "main.py", line 3
+//     print("hello"
+//                  ^
+//   SyntaxError: '(' was never closed
+func parsePythonErrors(errStr, fileName string) []CompileDiagnostic {
+	var diagnostics []CompileDiagnostic
+	lines := strings.Split(errStr, "\n")
+
+	for i, line := range lines {
+		line = strings.TrimSpace(line)
+		// 匹配 File "xxx", line N
+		if strings.Contains(line, "File") && strings.Contains(line, "line") {
+			lineNum := 1
+			// 提取行号
+			parts := strings.Split(line, "line ")
+			if len(parts) >= 2 {
+				numStr := strings.TrimSpace(parts[len(parts)-1])
+				if n, err := strconv.Atoi(numStr); err == nil {
+					lineNum = n
+				}
+			}
+			// 查找后续的错误信息（通常是 SyntaxError: xxx）
+			errMsg := ""
+			for j := i + 1; j < len(lines); j++ {
+				trimmed := strings.TrimSpace(lines[j])
+				if strings.Contains(trimmed, "Error:") || strings.Contains(trimmed, "Error") {
+					errMsg = trimmed
+					break
+				}
+			}
+			if errMsg == "" {
+				errMsg = strings.TrimSpace(errStr)
+			}
+			diagnostics = append(diagnostics, CompileDiagnostic{
+				Line:      lineNum,
+				Column:    1,
+				EndLine:   lineNum,
+				EndColumn: 1,
+				Severity:  "error",
+				Message:   errMsg,
+			})
+		}
+	}
+	return diagnostics
+}
+
+// parseCompileErrors 解析编译型语言的编译错误输出
+// 支持格式：
+//   gcc/g++: main.cpp:10:5: error: expected ';' after expression
+//   javac:   Main.java:5: error: ';' expected
+//   go:      ./main.go:8:2: undefined: fmt.Printl
+func parseCompileErrors(errStr, language, fileName string) []CompileDiagnostic {
+	var diagnostics []CompileDiagnostic
+	lines := strings.Split(errStr, "\n")
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		var d *CompileDiagnostic
+
+		switch language {
+		case "c", "cpp":
+			d = parseGccError(line, fileName)
+		case "java":
+			d = parseJavacError(line, fileName)
+		case "go":
+			d = parseGoError(line, fileName)
+		}
+
+		if d != nil {
+			diagnostics = append(diagnostics, *d)
+		}
+	}
+
+	// 如果没有解析出具体行号，返回通用错误
+	if len(diagnostics) == 0 && strings.TrimSpace(errStr) != "" {
+		diagnostics = append(diagnostics, CompileDiagnostic{
+			Line:      1,
+			Column:    1,
+			EndLine:   1,
+			EndColumn: 1,
+			Severity:  "error",
+			Message:   strings.TrimSpace(errStr),
+		})
+	}
+
+	return diagnostics
+}
+
+// parseGccError 解析 gcc/g++ 错误格式：main.cpp:10:5: error: expected ';'
+// 也支持 fatal error、note 等格式
+func parseGccError(line, fileName string) *CompileDiagnostic {
+	baseName := filepath.Base(fileName)
+	if !strings.Contains(line, baseName) {
+		return nil
+	}
+
+	// 跳过 note: 行（补充说明，不是独立错误）
+	if strings.Contains(line, ": note:") {
+		return nil
+	}
+
+	// 格式：filename:line:col: severity: message
+	idx := strings.Index(line, baseName+":")
+	if idx < 0 {
+		return nil
+	}
+	rest := line[idx+len(baseName)+1:]
+
+	parts := strings.SplitN(rest, ":", 4)
+	if len(parts) < 3 {
+		return nil
+	}
+
+	lineNum, err1 := strconv.Atoi(strings.TrimSpace(parts[0]))
+	colNum, err2 := strconv.Atoi(strings.TrimSpace(parts[1]))
+	if err1 != nil {
+		return nil
+	}
+	if err2 != nil {
+		colNum = 1
+	}
+
+	// 解析 severity 和 message
+	remaining := strings.TrimSpace(parts[2])
+	if len(parts) >= 4 {
+		remaining = strings.TrimSpace(parts[2]) + ":" + parts[3]
+	}
+
+	severity := "error"
+	message := remaining
+
+	// 匹配 "error:"、"fatal error:"、"warning:" 前缀
+	if strings.HasPrefix(remaining, "fatal error:") {
+		severity = "error"
+		message = strings.TrimPrefix(remaining, "fatal error:")
+		message = strings.TrimSpace(message)
+	} else if strings.HasPrefix(remaining, "error:") {
+		severity = "error"
+		message = strings.TrimPrefix(remaining, "error:")
+		message = strings.TrimSpace(message)
+	} else if strings.HasPrefix(remaining, "warning:") {
+		severity = "warning"
+		message = strings.TrimPrefix(remaining, "warning:")
+		message = strings.TrimSpace(message)
+	}
+
+	return &CompileDiagnostic{
+		Line:      lineNum,
+		Column:    colNum,
+		EndLine:   lineNum,
+		EndColumn: colNum,
+		Severity:  severity,
+		Message:   message,
+	}
+}
+
+// parseJavacError 解析 javac 错误格式：Main.java:5: error: ';' expected
+// javac 输出中每个错误后面会跟一行代码和一行 ^ 指示符，这些行不包含文件名所以会被自动跳过
+func parseJavacError(line, fileName string) *CompileDiagnostic {
+	baseName := filepath.Base(fileName)
+	if !strings.Contains(line, baseName) {
+		return nil
+	}
+
+	// 跳过 javac 的汇总行，如 "2 errors" 或 "1 error"
+	if strings.HasSuffix(strings.TrimSpace(line), "errors") || strings.HasSuffix(strings.TrimSpace(line), "error") {
+		if !strings.Contains(line, ":") {
+			return nil
+		}
+	}
+
+	idx := strings.Index(line, baseName+":")
+	if idx < 0 {
+		return nil
+	}
+	rest := line[idx+len(baseName)+1:]
+
+	parts := strings.SplitN(rest, ":", 3)
+	if len(parts) < 2 {
+		return nil
+	}
+
+	lineNum, err := strconv.Atoi(strings.TrimSpace(parts[0]))
+	if err != nil {
+		return nil
+	}
+
+	severity := "error"
+	message := strings.TrimSpace(strings.Join(parts[1:], ":"))
+	if strings.HasPrefix(message, "error:") {
+		severity = "error"
+		message = strings.TrimPrefix(message, "error:")
+		message = strings.TrimSpace(message)
+	} else if strings.HasPrefix(message, "warning:") {
+		severity = "warning"
+		message = strings.TrimPrefix(message, "warning:")
+		message = strings.TrimSpace(message)
+	}
+
+	return &CompileDiagnostic{
+		Line:      lineNum,
+		Column:    1,
+		EndLine:   lineNum,
+		EndColumn: 1,
+		Severity:  severity,
+		Message:   message,
+	}
+}
+
+// parseGoError 解析 Go 编译错误格式：./main.go:8:2: undefined: fmt.Printl
+func parseGoError(line, fileName string) *CompileDiagnostic {
+	baseName := filepath.Base(fileName)
+	// Go 错误可能以 ./ 开头
+	if !strings.Contains(line, baseName) {
+		return nil
+	}
+
+	idx := strings.Index(line, baseName+":")
+	if idx < 0 {
+		return nil
+	}
+	rest := line[idx+len(baseName)+1:]
+
+	parts := strings.SplitN(rest, ":", 3)
+	if len(parts) < 2 {
+		return nil
+	}
+
+	lineNum, err1 := strconv.Atoi(strings.TrimSpace(parts[0]))
+	if err1 != nil {
+		return nil
+	}
+
+	colNum := 1
+	message := ""
+	if len(parts) >= 3 {
+		if n, err := strconv.Atoi(strings.TrimSpace(parts[1])); err == nil {
+			colNum = n
+			message = strings.TrimSpace(parts[2])
+		} else {
+			message = strings.TrimSpace(strings.Join(parts[1:], ":"))
+		}
+	} else {
+		message = strings.TrimSpace(parts[1])
+	}
+
+	return &CompileDiagnostic{
+		Line:      lineNum,
+		Column:    colNum,
+		EndLine:   lineNum,
+		EndColumn: colNum,
+		Severity:  "error",
+		Message:   message,
+	}
 }
 
 // buildEnv 构建子进程环境变量，确保 Java 等工具路径可被找到
