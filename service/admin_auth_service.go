@@ -176,3 +176,57 @@ func (s *AdminAuthService) UpdateAdminEmail(ctx context.Context, adminId, email 
 
 	return nil
 }
+
+// UpdateAdminRealName 更新管理员真实姓名
+func (s *AdminAuthService) UpdateAdminRealName(ctx context.Context, adminId, realName string) error {
+	if adminId == "" {
+		return errs.NewCommonError(errs.ErrBadRequest, "管理员ID不能为空")
+	}
+	if realName == "" {
+		return errs.NewCommonError(errs.ErrBadRequest, "真实姓名不能为空")
+	}
+
+	if err := s.adminUserDAO.UpdateAdminUserRealName(adminId, realName); err != nil {
+		return errs.NewCommonError(errs.ErrInternal, "更新真实姓名失败: "+err.Error())
+	}
+
+	return nil
+}
+
+// UpdateAdminPhone 更新管理员手机号（需要验证码校验）
+func (s *AdminAuthService) UpdateAdminPhone(ctx context.Context, adminId, newPhone, code string) error {
+	if adminId == "" {
+		return errs.NewCommonError(errs.ErrBadRequest, "管理员ID不能为空")
+	}
+	if newPhone == "" {
+		return errs.NewCommonError(errs.ErrBadRequest, "新手机号不能为空")
+	}
+	if len(newPhone) != 11 {
+		return errs.NewCommonError(errs.ErrBadRequest, "手机号格式不正确")
+	}
+	if code == "" {
+		return errs.NewCommonError(errs.ErrBadRequest, "验证码不能为空")
+	}
+
+	// 校验验证码
+	codeKey := fmt.Sprintf("%s_%s", consts.RoleAdmin, consts.UpdatePhone)
+	if err := s.verificationCodeService.VerifyCode(newPhone, code, codeKey); err != nil {
+		return errs.NewCommonError(errs.ErrBadRequest, "验证码验证失败: "+err.Error())
+	}
+
+	// 检查新手机号是否已被其他管理员使用
+	existingAdmin, err := s.adminUserDAO.GetAdminUserByPhoneNumber(newPhone)
+	if err != nil {
+		return errs.NewCommonError(errs.ErrInternal, "查询手机号失败: "+err.Error())
+	}
+	if existingAdmin != nil && existingAdmin.AdminId != adminId {
+		return errs.NewCommonError(errs.ErrBadRequest, "该手机号已被其他账号使用")
+	}
+
+	// 更新手机号
+	if err := s.adminUserDAO.UpdateAdminUserPhoneNumber(adminId, newPhone); err != nil {
+		return errs.NewCommonError(errs.ErrInternal, "更新手机号失败: "+err.Error())
+	}
+
+	return nil
+}

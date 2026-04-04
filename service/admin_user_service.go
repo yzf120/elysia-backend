@@ -220,6 +220,7 @@ func (s *AdminUserService) convertModelToAdminUserInfo(model *admin.AdminUser) *
 		Id:                 model.Id,
 		AdminId:            model.AdminId,
 		Username:           model.Username,
+		PhoneNumber:        model.PhoneNumber,
 		RealName:           model.RealName,
 		Email:              model.Email,
 		Role:               model.Role,

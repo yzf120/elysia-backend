@@ -7,6 +7,7 @@ type CodeRun struct {
 	Id         int64     `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
 	ProblemId  int64     `gorm:"column:problem_id;not null;index" json:"problem_id"`
 	StudentId  string    `gorm:"column:student_id;type:varchar(64);not null;index" json:"student_id"`
+	TeacherId  string    `gorm:"column:teacher_id;type:varchar(64);not null;default:''" json:"teacher_id"`
 	Language   string    `gorm:"column:language;type:varchar(32);not null" json:"language"`
 	Code       string    `gorm:"column:code;type:longtext;not null" json:"code"`
 	RunType    string    `gorm:"column:run_type;type:enum('test','submit');not null;default:'test'" json:"run_type"`

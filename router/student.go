@@ -23,8 +23,9 @@ import (
 )
 
 var (
-	studentService     *service_impl.StudentServiceImpl
-	studentAuthService *service.StudentAuthService
+	studentService        *service_impl.StudentServiceImpl
+	studentAuthService    *service.StudentAuthService
+	studentProfileService *service.StudentProfileService
 )
 
 // registerStudent 学生相关路由
@@ -51,6 +52,9 @@ func registerStudent(publicRouter *mux.Router, protectedRouter *mux.Router) {
 	protectedRouter.HandleFunc("/student/profile", updateStudentProfileHandler).Methods("POST")
 	protectedRouter.HandleFunc("/student/profile/password", updateStudentPasswordHandler).Methods("POST")
 	protectedRouter.HandleFunc("/student/profile/study-stats", getStudentStudyStatsHandler).Methods("GET")
+
+	// 学生做题画像接口
+	protectedRouter.HandleFunc("/student/profile/coding-stats", getStudentCodingStatsHandler).Methods("GET")
 
 	// 学生班级完成度
 	protectedRouter.HandleFunc("/student/class-progress", getStudentClassProgressHandler).Methods("GET")
@@ -290,13 +294,13 @@ func getPendingChaptersHandler(w http.ResponseWriter, r *http.Request) {
 	codeRunDAO := dao.NewCodeRunDAO()
 
 	type PendingChapter struct {
-		ChapterId   string `json:"chapter_id"`
-		ChapterTitle string `json:"chapter_title"`
-		CourseName   string `json:"course_name"`
-		ClassName    string `json:"class_name"`
-		ClassId      string `json:"class_id"`
-		TotalSections    int `json:"total_sections"`
-		CompletedSections int `json:"completed_sections"`
+		ChapterId         string `json:"chapter_id"`
+		ChapterTitle      string `json:"chapter_title"`
+		CourseName        string `json:"course_name"`
+		ClassName         string `json:"class_name"`
+		ClassId           string `json:"class_id"`
+		TotalSections     int    `json:"total_sections"`
+		CompletedSections int    `json:"completed_sections"`
 	}
 
 	var pendingChapters []PendingChapter
@@ -866,5 +870,69 @@ func getStudentClassProgressHandler(w http.ResponseWriter, r *http.Request) {
 
 	writeSuccessResponse(w, map[string]interface{}{
 		"class_progress": result,
+	})
+}
+
+// getStudentCodingStatsHandler 获取学生做题画像数据（供个人页展示）
+func getStudentCodingStatsHandler(w http.ResponseWriter, r *http.Request) {
+	setResponseHeaders(w)
+
+	// 从上下文获取学生ID
+	studentId, ok := r.Context().Value(authen.RoleIDKey).(string)
+	if !ok || studentId == "" {
+		writeErrorResponse(w, http.StatusUnauthorized, "未授权")
+		return
+	}
+
+	// 延迟初始化 profileService
+	if studentProfileService == nil {
+		studentProfileService = service.NewStudentProfileService()
+	}
+
+	profile, err := studentProfileService.GetProfile(studentId)
+	if err != nil {
+		writeErrorResponse(w, http.StatusInternalServerError, "查询做题画像失败")
+		return
+	}
+
+	if profile == nil {
+		// 画像不存在，尝试主动生成一次（可能学生已有提交记录但画像尚未生成）
+		studentProfileService.UpdateProfileAfterSubmit(studentId)
+		// 重新查询
+		profile, err = studentProfileService.GetProfile(studentId)
+		if err != nil || profile == nil {
+			// 仍然没有画像（说明该学生确实没有提交记录）
+			writeSuccessResponse(w, map[string]interface{}{
+				"has_profile": false,
+			})
+			return
+		}
+	}
+
+	// 解析 JSON 字段
+	var commonErrors []string
+	if profile.CommonErrors != "" {
+		_ = json.Unmarshal([]byte(profile.CommonErrors), &commonErrors)
+	}
+
+	var languageStats map[string]int
+	if profile.LanguageStats != "" {
+		_ = json.Unmarshal([]byte(profile.LanguageStats), &languageStats)
+	}
+
+	// 返回前端需要展示的关键字段
+	writeSuccessResponse(w, map[string]interface{}{
+		"has_profile":             true,
+		"total_submissions":       profile.TotalSubmissions,
+		"accepted_count":          profile.AcceptedCount,
+		"accept_rate":             profile.AcceptRate,
+		"solved_problem_count":    profile.SolvedProblemCount,
+		"attempted_problem_count": profile.AttemptedProblemCount,
+		"preferred_language":      profile.PreferredLanguage,
+		"language_stats":          languageStats,
+		"common_errors":           commonErrors,
+		"difficulty_level":        profile.DifficultyLevel,
+		"avg_time_cost":           profile.AvgTimeCost,
+		"last_submit_time":        profile.LastSubmitTime,
 	})
 }

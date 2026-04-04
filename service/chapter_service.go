@@ -174,8 +174,8 @@ func (s *ChapterService) CreateSection(teacherId, chapterId, title, description 
 	if teacherId == "" || chapterId == "" || title == "" {
 		return nil, errs.NewCommonError(errs.ErrBadRequest, "必填参数不能为空")
 	}
-	if sectionType != classModel.SectionTypeProblem && sectionType != classModel.SectionTypeDiscussion {
-		return nil, errs.NewCommonError(errs.ErrBadRequest, "小节类型不合法（1-算法题，2-讨论话题）")
+	if sectionType != classModel.SectionTypeProblem && sectionType != classModel.SectionTypeDiscussion && sectionType != classModel.SectionTypeMaterial {
+		return nil, errs.NewCommonError(errs.ErrBadRequest, "小节类型不合法（1-算法题，2-讨论话题，3-学习资料）")
 	}
 
 	chapter, err := s.chapterDAO.GetChapterById(chapterId)

@@ -104,3 +104,53 @@ func (s *CodeRunServiceImpl) ListCodeRunRecords(ctx context.Context, studentId s
 func (s *CodeRunServiceImpl) BatchGetAcceptedProblems(ctx context.Context, studentId string, problemIds []int64) (map[int64]bool, error) {
 	return s.codeRunService.BatchGetAcceptedProblems(studentId, problemIds)
 }
+
+// SubmitTeacherCodeRun 教师提交代码运行任务
+func (s *CodeRunServiceImpl) SubmitTeacherCodeRun(ctx context.Context, teacherId string, request *codeReq.CodeRunRequest) (*codeRsp.CodeRunResponse, error) {
+	record, err := s.codeRunService.SubmitTeacherCodeRun(ctx, teacherId, request.ProblemId, request.Language, request.Code, request.RunType, request.TestInput)
+	if err != nil {
+		code, msg := errs.ParseCommonError(err.Error())
+		return &codeRsp.CodeRunResponse{
+			Code:    int32(code),
+			Message: msg,
+		}, nil
+	}
+	return &codeRsp.CodeRunResponse{
+		Code:    consts.SuccessCode,
+		Message: "代码已提交，正在评测中",
+		RunId:   record.Id,
+	}, nil
+}
+
+// ListTeacherCodeRunRecords 查询教师某题的运行记录列表
+func (s *CodeRunServiceImpl) ListTeacherCodeRunRecords(ctx context.Context, teacherId string, problemId int64) (*codeRsp.ListCodeRunRecordsResponse, error) {
+	records, err := s.codeRunService.ListTeacherCodeRunRecords(teacherId, problemId, 10)
+	if err != nil {
+		code, msg := errs.ParseCommonError(err.Error())
+		return &codeRsp.ListCodeRunRecordsResponse{
+			Code:    int32(code),
+			Message: msg,
+			Records: nil,
+		}, nil
+	}
+	results := make([]*codeRsp.CodeRunResult, 0, len(records))
+	for _, r := range records {
+		results = append(results, &codeRsp.CodeRunResult{
+			RunId:      r.Id,
+			Status:     r.Status,
+			Output:     r.Output,
+			ErrorMsg:   r.ErrorMsg,
+			TimeCost:   r.TimeCost,
+			MemoryUsed: r.MemoryUsed,
+			RunType:    r.RunType,
+			Language:   r.Language,
+			Code:       r.Code,
+			CreatedAt:  r.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+	return &codeRsp.ListCodeRunRecordsResponse{
+		Code:    consts.SuccessCode,
+		Message: consts.MessageQuerySuccess,
+		Records: results,
+	}, nil
+}

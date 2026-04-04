@@ -1,0 +1,25 @@
+-- 学生画像表（每次做题后自动更新）
+CREATE TABLE IF NOT EXISTS `student_profile` (
+    `id`                    BIGINT       NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `student_id`            VARCHAR(64)  NOT NULL COMMENT '学生ID',
+    `total_submissions`     INT          NOT NULL DEFAULT 0 COMMENT '总提交次数（仅 submit 类型）',
+    `accepted_count`        INT          NOT NULL DEFAULT 0 COMMENT '通过次数',
+    `wrong_answer_count`    INT          NOT NULL DEFAULT 0 COMMENT '答案错误次数',
+    `compile_error_count`   INT          NOT NULL DEFAULT 0 COMMENT '编译错误次数',
+    `runtime_error_count`   INT          NOT NULL DEFAULT 0 COMMENT '运行时错误次数',
+    `tle_count`             INT          NOT NULL DEFAULT 0 COMMENT '超时次数',
+    `mle_count`             INT          NOT NULL DEFAULT 0 COMMENT '内存超限次数',
+    `accept_rate`           DECIMAL(5,4) NOT NULL DEFAULT 0.0000 COMMENT '通过率（0.0000~1.0000）',
+    `solved_problem_count`  INT          NOT NULL DEFAULT 0 COMMENT '已解决题目数（至少一次 accepted）',
+    `attempted_problem_count` INT        NOT NULL DEFAULT 0 COMMENT '尝试过的题目数',
+    `preferred_language`    VARCHAR(32)  DEFAULT NULL COMMENT '最常用编程语言',
+    `language_stats`        TEXT         DEFAULT NULL COMMENT '各编程语言使用次数（JSON对象，如 {"c":15,"cpp":8,"python":3}）',
+    `avg_time_cost`         BIGINT       DEFAULT 0 COMMENT '平均执行时间（毫秒）',
+    `common_errors`         TEXT         DEFAULT NULL COMMENT '常见错误类型（JSON数组，如 ["compile_error","wrong_answer"]）',
+    `difficulty_level`      VARCHAR(32)  DEFAULT 'beginner' COMMENT 'AI推断的能力等级：beginner/intermediate/advanced',
+    `last_submit_time`      DATETIME     DEFAULT NULL COMMENT '最近一次提交时间',
+    `created_at`            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at`            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_student_id` (`student_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='学生做题画像表（每次做题后自动更新）';

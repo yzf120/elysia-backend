@@ -126,4 +126,5 @@ message AdminUserInfo {
   string create_time = 12;     // 创建时间
   string update_time = 13;      // 最后更新时间
   string remark = 14;          // 备注
+  string phone_number = 15;    // 手机号
 }

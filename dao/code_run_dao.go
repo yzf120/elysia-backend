@@ -10,6 +10,7 @@ type CodeRunDAO interface {
 	GetCodeRunById(id int64) (*code.CodeRun, error)
 	UpdateCodeRun(id int64, updates map[string]interface{}) error
 	ListCodeRunsByStudent(studentId string, problemId int64, limit int) ([]*code.CodeRun, error)
+	ListCodeRunsByTeacher(teacherId string, problemId int64, limit int) ([]*code.CodeRun, error)
 	// BatchGetAcceptedProblems 批量查询学生已完全通过（accepted）的题目ID集合
 	BatchGetAcceptedProblems(studentId string, problemIds []int64) (map[int64]bool, error)
 }
@@ -45,6 +46,19 @@ func (d *codeRunDAOImpl) UpdateCodeRun(id int64, updates map[string]interface{})
 func (d *codeRunDAOImpl) ListCodeRunsByStudent(studentId string, problemId int64, limit int) ([]*code.CodeRun, error) {
 	var records []*code.CodeRun
 	query := DB.Where("student_id = ? AND problem_id = ?", studentId, problemId).
+		Order("created_at DESC").
+		Limit(limit)
+	err := query.Find(&records).Error
+	if err != nil {
+		return nil, err
+	}
+	return records, nil
+}
+
+// ListCodeRunsByTeacher 查询教师的运行记录列表
+func (d *codeRunDAOImpl) ListCodeRunsByTeacher(teacherId string, problemId int64, limit int) ([]*code.CodeRun, error) {
+	var records []*code.CodeRun
+	query := DB.Where("teacher_id = ? AND problem_id = ?", teacherId, problemId).
 		Order("created_at DESC").
 		Limit(limit)
 	err := query.Find(&records).Error

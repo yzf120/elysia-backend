@@ -32,6 +32,7 @@ func Init() {
 	teacherApprovalService = service_impl.NewTeacherApprovalServiceImpl()
 	contentModerationService = service.NewContentModerationService()
 	intentService = service.NewIntentService()
+	materialService = service.NewMaterialService()
 }
 
 func RegisterRouter(router *mux.Router) {
@@ -81,6 +82,9 @@ func registerApiRouters(publicRouter *mux.Router, protectedRouter *mux.Router) {
 
 	// 章节相关接口（增删改仅教师，查询学生和教师均可）
 	registerChapter(publicRouter, protectedRouter)
+
+	// 学习资料相关接口（上传删除仅教师，查看下载师生共用）
+	registerMaterial(publicRouter, protectedRouter)
 
 	// 代码运行相关接口（学生端）
 	registerCodeRun(protectedRouter)

@@ -69,15 +69,17 @@ var langConfigs = map[string]langConfig{
 
 // CodeRunService 代码运行服务
 type CodeRunService struct {
-	codeRunDAO dao.CodeRunDAO
-	problemDAO dao.ProblemDAO
+	codeRunDAO     dao.CodeRunDAO
+	problemDAO     dao.ProblemDAO
+	profileService *StudentProfileService
 }
 
 // NewCodeRunService 创建代码运行服务
 func NewCodeRunService() *CodeRunService {
 	return &CodeRunService{
-		codeRunDAO: dao.NewCodeRunDAO(),
-		problemDAO: dao.NewProblemDAO(),
+		codeRunDAO:     dao.NewCodeRunDAO(),
+		problemDAO:     dao.NewProblemDAO(),
+		profileService: NewStudentProfileService(),
 	}
 }
 
@@ -116,8 +118,8 @@ func (s *CodeRunService) SubmitCodeRun(ctx context.Context, studentId string, pr
 		// 测试模式：使用 showcase 字段的用例（不记录到运行记录，直接执行后更新结果）
 		go s.executeCodeWithShowcase(record.Id, p, language, code)
 	} else {
-		// 提交模式：执行 test_cases 全部用例
-		go s.executeCode(record.Id, p, language, code, runType)
+		// 提交模式：执行 test_cases 全部用例，完成后异步更新学生画像
+		go s.executeCodeAndUpdateProfile(record.Id, p, language, code, runType, studentId)
 	}
 
 	return record, nil
@@ -135,6 +137,51 @@ func (s *CodeRunService) GetCodeRunResult(runId int64) (*codeModel.CodeRun, erro
 // ListCodeRunRecords 查询学生某题的运行记录列表（倒序，只查 submit 类型）
 func (s *CodeRunService) ListCodeRunRecords(studentId string, problemId int64, limit int) ([]*codeModel.CodeRun, error) {
 	records, err := s.codeRunDAO.ListCodeRunsByStudent(studentId, problemId, limit)
+	if err != nil {
+		return nil, errs.NewCommonError(errs.ErrInternal, "查询运行记录失败: "+err.Error())
+	}
+	return records, nil
+}
+
+// SubmitTeacherCodeRun 教师提交代码运行任务（复用代码执行逻辑，记录 teacher_id）
+func (s *CodeRunService) SubmitTeacherCodeRun(ctx context.Context, teacherId string, problemId int64, language, code, runType, testInput string) (*codeModel.CodeRun, error) {
+	if _, ok := langConfigs[language]; !ok {
+		return nil, errs.NewCommonError(errs.ErrBadRequest, "不支持的编程语言: "+language)
+	}
+	if runType != "test" && runType != "submit" {
+		return nil, errs.NewCommonError(errs.ErrBadRequest, "run_type 必须为 test 或 submit")
+	}
+
+	p, err := s.problemDAO.GetProblemById(problemId)
+	if err != nil || p == nil {
+		return nil, errs.NewCommonError(errs.ErrBadRequest, "题目不存在")
+	}
+
+	record := &codeModel.CodeRun{
+		ProblemId: problemId,
+		StudentId: "",
+		TeacherId: teacherId,
+		Language:  language,
+		Code:      code,
+		RunType:   runType,
+		Status:    "pending",
+	}
+	if err := s.codeRunDAO.CreateCodeRun(record); err != nil {
+		return nil, errs.NewCommonError(errs.ErrInternal, "创建运行记录失败: "+err.Error())
+	}
+
+	if runType == "test" {
+		go s.executeCodeWithShowcase(record.Id, p, language, code)
+	} else {
+		go s.executeCode(record.Id, p, language, code, runType)
+	}
+
+	return record, nil
+}
+
+// ListTeacherCodeRunRecords 查询教师某题的运行记录列表（倒序）
+func (s *CodeRunService) ListTeacherCodeRunRecords(teacherId string, problemId int64, limit int) ([]*codeModel.CodeRun, error) {
+	records, err := s.codeRunDAO.ListCodeRunsByTeacher(teacherId, problemId, limit)
 	if err != nil {
 		return nil, errs.NewCommonError(errs.ErrInternal, "查询运行记录失败: "+err.Error())
 	}
@@ -263,6 +310,16 @@ func (s *CodeRunService) executeCodeWithShowcase(runId int64, p *problem.Problem
 		"time_cost":   totalTimeCost,
 		"memory_used": maxMemoryUsed,
 	})
+}
+
+// executeCodeAndUpdateProfile 执行代码并在完成后异步更新学生画像
+func (s *CodeRunService) executeCodeAndUpdateProfile(runId int64, p *problem.Problem, language, code, runType, studentId string) {
+	s.executeCode(runId, p, language, code, runType)
+
+	// 异步更新学生画像（仅学生提交时触发）
+	if studentId != "" && s.profileService != nil {
+		go s.profileService.UpdateProfileAfterSubmit(studentId)
+	}
 }
 
 // executeCode 在沙箱中执行代码（goroutine 中运行）

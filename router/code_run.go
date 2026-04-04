@@ -19,14 +19,16 @@ var (
 
 // registerCodeRun 注册代码运行相关路由（学生端，需要认证）
 func registerCodeRun(protectedRouter *mux.Router) {
-	// 提交代码运行/测试任务
+	// 学生端
 	protectedRouter.HandleFunc("/student/code/run", submitCodeRunHandler).Methods("POST")
-	// 查询代码运行结果（轮询）
 	protectedRouter.HandleFunc("/student/code/result", getCodeRunResultHandler).Methods("GET")
-	// 查询学生某题的运行记录列表（最新10条，倒序）
 	protectedRouter.HandleFunc("/student/code/records", listCodeRunRecordsHandler).Methods("GET")
-	// 批量查询学生已完全通过的题目ID集合（用于课程目录打钩）
 	protectedRouter.HandleFunc("/student/code/progress", getCodeProgressHandler).Methods("GET")
+
+	// 教师端（复用代码执行引擎，独立接口路径）
+	protectedRouter.HandleFunc("/teacher/code/run", teacherSubmitCodeRunHandler).Methods("POST")
+	protectedRouter.HandleFunc("/teacher/code/result", getCodeRunResultHandler).Methods("GET") // 复用查询结果
+	protectedRouter.HandleFunc("/teacher/code/records", teacherListCodeRunRecordsHandler).Methods("GET")
 }
 
 // submitCodeRunHandler 提交代码运行任务处理器
@@ -240,5 +242,115 @@ func getCodeProgressHandler(w http.ResponseWriter, r *http.Request) {
 
 	writeSuccessResponse(w, map[string]interface{}{
 		"accepted_problem_ids": acceptedIds,
+	})
+}
+
+// ==================== 教师端代码运行 ====================
+
+// teacherSubmitCodeRunHandler 教师提交代码运行任务
+func teacherSubmitCodeRunHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	setResponseHeaders(w)
+
+	teacherId, ok := authen.GetRoleIDFromContext(ctx)
+	if !ok || teacherId == "" {
+		writeErrorResponse(w, http.StatusUnauthorized, "未授权，请先登录")
+		return
+	}
+
+	request := &codeReq.CodeRunRequest{}
+	if err := json.NewDecoder(r.Body).Decode(request); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+
+	if request.ProblemId <= 0 {
+		writeErrorResponse(w, http.StatusBadRequest, "problem_id 无效")
+		return
+	}
+	if request.Code == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "代码不能为空")
+		return
+	}
+	if request.Language == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "language 不能为空")
+		return
+	}
+	if request.RunType == "" {
+		request.RunType = "test"
+	}
+
+	resp, err := codeRunService.SubmitTeacherCodeRun(ctx, teacherId, request)
+	if err != nil {
+		errResp := &errs.BaseResponse{
+			Data:  nil,
+			Error: errs.NewError(http.StatusInternalServerError, err.Error()),
+		}
+		respBytes, _ := json.Marshal(errResp)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(respBytes)
+		return
+	}
+
+	if resp.Code != 0 {
+		errResp := &errs.BaseResponse{
+			Data:  nil,
+			Error: errs.NewError(int(resp.Code), resp.Message),
+		}
+		respBytes, _ := json.Marshal(errResp)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(respBytes)
+		return
+	}
+
+	writeSuccessResponse(w, map[string]interface{}{
+		"run_id":  resp.RunId,
+		"message": resp.Message,
+	})
+}
+
+// teacherListCodeRunRecordsHandler 查询教师某题的运行记录列表
+func teacherListCodeRunRecordsHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	setResponseHeaders(w)
+
+	teacherId, ok := authen.GetRoleIDFromContext(ctx)
+	if !ok || teacherId == "" {
+		writeErrorResponse(w, http.StatusUnauthorized, "未授权，请先登录")
+		return
+	}
+
+	problemIdStr := r.URL.Query().Get("problem_id")
+	problemId, err := strconv.ParseInt(problemIdStr, 10, 64)
+	if err != nil || problemId <= 0 {
+		writeErrorResponse(w, http.StatusBadRequest, "problem_id 无效")
+		return
+	}
+
+	resp, err := codeRunService.ListTeacherCodeRunRecords(ctx, teacherId, problemId)
+	if err != nil {
+		errResp := &errs.BaseResponse{
+			Data:  nil,
+			Error: errs.NewError(http.StatusInternalServerError, err.Error()),
+		}
+		respBytes, _ := json.Marshal(errResp)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(respBytes)
+		return
+	}
+
+	if resp.Code != 0 {
+		errResp := &errs.BaseResponse{
+			Data:  nil,
+			Error: errs.NewError(int(resp.Code), resp.Message),
+		}
+		respBytes, _ := json.Marshal(errResp)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(respBytes)
+		return
+	}
+
+	writeSuccessResponse(w, map[string]interface{}{
+		"records": resp.Records,
 	})
 }

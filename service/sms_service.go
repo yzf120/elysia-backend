@@ -46,7 +46,7 @@ func (s *SMSService) SendVerificationCode(ctx context.Context, phoneNumber, user
 	if userType != consts.RoleStudent && userType != consts.RoleTeacher && userType != consts.RoleAdmin {
 		return errs.NewCommonError(errs.ErrBadRequest, "用户类型不正确")
 	}
-	if codeType != consts.Register && codeType != consts.Login {
+	if codeType != consts.Register && codeType != consts.Login && codeType != consts.UpdatePhone {
 		return errs.NewCommonError(errs.ErrBadRequest, "验证码类型不正确")
 	}
 
@@ -97,6 +97,24 @@ func (s *SMSService) SendVerificationCode(ctx context.Context, phoneNumber, user
 
 		if !exists {
 			return errs.NewCommonError(errs.ErrBadRequest, "该手机号未注册")
+		}
+	} else if codeType == consts.UpdatePhone {
+		// 修改手机号时检查新手机号是否已被其他用户使用
+		var exists bool
+		switch userType {
+		case consts.RoleStudent:
+			student, _ := s.studentDAO.GetStudentByPhoneNumber(phoneNumber)
+			exists = student != nil
+		case consts.RoleTeacher:
+			teacher, _ := s.teacherDAO.GetTeacherByPhoneNumber(phoneNumber)
+			exists = teacher != nil
+		case consts.RoleAdmin:
+			admin, _ := s.adminUserDAO.GetAdminUserByPhoneNumber(phoneNumber)
+			exists = admin != nil
+		}
+
+		if exists {
+			return errs.NewCommonError(errs.ErrBadRequest, "该手机号已被其他账号使用")
 		}
 	}
 

@@ -6,6 +6,7 @@ import "time"
 const (
 	SectionTypeProblem    = 1 // 算法题
 	SectionTypeDiscussion = 2 // 讨论话题
+	SectionTypeMaterial   = 3 // 学习资料
 )
 
 // ClassChapter 班级章节数据模型

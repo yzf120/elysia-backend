@@ -12,12 +12,14 @@ import (
 // ChapterServiceImpl 章节服务实现（只做出入参处理）
 type ChapterServiceImpl struct {
 	chapterService *service.ChapterService
+	materialDAO    dao.MaterialDAO
 }
 
 // NewChapterServiceImpl 创建章节服务实现
 func NewChapterServiceImpl() *ChapterServiceImpl {
 	return &ChapterServiceImpl{
 		chapterService: service.NewChapterService(),
+		materialDAO:    dao.NewMaterialDAO(),
 	}
 }
 
@@ -98,9 +100,9 @@ func (s *ChapterServiceImpl) DeleteChapter(ctx context.Context, req *DeleteChapt
 
 // ReorderChaptersRequest 调整章节排序请求
 type ReorderChaptersRequest struct {
-	TeacherId string              `json:"teacher_id"` // 教师ID（必填）
-	ClassId   string              `json:"class_id"`   // 班级ID（必填）
-	Orders    []ChapterOrderItem  `json:"orders"`     // 排序列表
+	TeacherId string             `json:"teacher_id"` // 教师ID（必填）
+	ClassId   string             `json:"class_id"`   // 班级ID（必填）
+	Orders    []ChapterOrderItem `json:"orders"`     // 排序列表
 }
 
 // ChapterOrderItem 章节排序项
@@ -259,15 +261,17 @@ type SectionInfo struct {
 	ClassId     string `json:"class_id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
-	SectionType int32  `json:"section_type"` // 1-算法题，2-讨论话题
+	SectionType int32  `json:"section_type"` // 1-算法题，2-讨论话题，3-学习资料
 	// 算法题关联
 	ProblemId string `json:"problem_id"`
 	// 讨论内容
 	DiscussionTitle   string `json:"discussion_title"`
 	DiscussionContent string `json:"discussion_content"`
-	SortOrder   int32  `json:"sort_order"`
-	CreateTime  string `json:"create_time"`
-	UpdateTime  string `json:"update_time"`
+	// 学习资料统计
+	MaterialCount int    `json:"material_count"`
+	SortOrder     int32  `json:"sort_order"`
+	CreateTime    string `json:"create_time"`
+	UpdateTime    string `json:"update_time"`
 }
 
 // ChapterInfo 章节信息（含小节列表）
@@ -316,7 +320,7 @@ func (s *ChapterServiceImpl) GetClassChapters(ctx context.Context, req *GetClass
 		}
 		if sections, ok := sectionMap[ch.ChapterId]; ok {
 			for _, sec := range sections {
-				info.Sections = append(info.Sections, &SectionInfo{
+				secInfo := &SectionInfo{
 					SectionId:         sec.SectionId,
 					ChapterId:         sec.ChapterId,
 					ClassId:           sec.ClassId,
@@ -329,7 +333,13 @@ func (s *ChapterServiceImpl) GetClassChapters(ctx context.Context, req *GetClass
 					SortOrder:         sec.SortOrder,
 					CreateTime:        sec.CreateTime.Format("2006-01-02 15:04:05"),
 					UpdateTime:        sec.UpdateTime.Format("2006-01-02 15:04:05"),
-				})
+				}
+				// 学习资料类型小节：查询资料数量
+				if sec.SectionType == 3 {
+					materials, _ := s.materialDAO.ListMaterialsBySectionId(sec.SectionId)
+					secInfo.MaterialCount = len(materials)
+				}
+				info.Sections = append(info.Sections, secInfo)
 			}
 		}
 		chapterInfos = append(chapterInfos, info)

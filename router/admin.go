@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/yzf120/elysia-backend/authen"
 	"github.com/yzf120/elysia-backend/consts"
 	"github.com/yzf120/elysia-backend/errs"
 	"github.com/yzf120/elysia-backend/model/auth"
@@ -40,6 +41,9 @@ func registerAdmin(publicRouter *mux.Router, protectedRouter *mux.Router) {
 	protectedRouter.HandleFunc("/admin/profile", getAdminProfileHandler).Methods("GET")
 	protectedRouter.HandleFunc("/admin/profile/password", updateAdminPasswordHandler).Methods("POST")
 	protectedRouter.HandleFunc("/admin/profile/email", updateAdminEmailHandler).Methods("POST")
+	protectedRouter.HandleFunc("/admin/profile/real-name", updateAdminRealNameHandler).Methods("POST")
+	protectedRouter.HandleFunc("/admin/profile/phone/send-code", sendUpdatePhoneCodeHandler).Methods("POST")
+	protectedRouter.HandleFunc("/admin/profile/phone", updateAdminPhoneHandler).Methods("POST")
 	protectedRouter.HandleFunc("/admin/auth/logout", adminLogoutHandler).Methods("POST")
 }
 
@@ -357,8 +361,8 @@ func getAdminProfileHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	setResponseHeaders(w)
 
-	// 从上下文获取管理员ID
-	adminId, ok := ctx.Value("admin_id").(string)
+	// 从上下文获取管理员ID（通过 Authen 中间件设置的 RoleID）
+	adminId, ok := authen.GetRoleIDFromContext(ctx)
 	if !ok || adminId == "" {
 		writeErrorResponse(w, http.StatusUnauthorized, "未授权")
 		return
@@ -390,8 +394,8 @@ func updateAdminPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	setResponseHeaders(w)
 
-	// 从上下文获取管理员ID
-	adminId, ok := ctx.Value("admin_id").(string)
+	// 从上下文获取管理员ID（通过 Authen 中间件设置的 RoleID）
+	adminId, ok := authen.GetRoleIDFromContext(ctx)
 	if !ok || adminId == "" {
 		writeErrorResponse(w, http.StatusUnauthorized, "未授权")
 		return
@@ -434,8 +438,8 @@ func updateAdminEmailHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	setResponseHeaders(w)
 
-	// 从上下文获取管理员ID
-	adminId, ok := ctx.Value("admin_id").(string)
+	// 从上下文获取管理员ID（通过 Authen 中间件设置的 RoleID）
+	adminId, ok := authen.GetRoleIDFromContext(ctx)
 	if !ok || adminId == "" {
 		writeErrorResponse(w, http.StatusUnauthorized, "未授权")
 		return
@@ -460,6 +464,101 @@ func updateAdminEmailHandler(w http.ResponseWriter, r *http.Request) {
 
 	writeSuccessResponse(w, map[string]interface{}{
 		"message": "邮箱绑定成功",
+	})
+}
+
+// updateAdminRealNameHandler 更新当前管理员真实姓名
+func updateAdminRealNameHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	setResponseHeaders(w)
+
+	// 从上下文获取管理员ID
+	adminId, ok := authen.GetRoleIDFromContext(ctx)
+	if !ok || adminId == "" {
+		writeErrorResponse(w, http.StatusUnauthorized, "未授权")
+		return
+	}
+
+	// 解析请求体
+	var reqBody struct {
+		RealName string `json:"real_name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+
+	if err := adminAuthService.UpdateAdminRealName(ctx, adminId, reqBody.RealName); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	writeSuccessResponse(w, map[string]interface{}{
+		"message": "真实姓名修改成功",
+	})
+}
+
+// sendUpdatePhoneCodeHandler 发送修改手机号验证码
+func sendUpdatePhoneCodeHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	setResponseHeaders(w)
+
+	// 从上下文获取管理员ID（确认已登录）
+	adminId, ok := authen.GetRoleIDFromContext(ctx)
+	if !ok || adminId == "" {
+		writeErrorResponse(w, http.StatusUnauthorized, "未授权")
+		return
+	}
+
+	// 解析请求体
+	var reqBody struct {
+		PhoneNumber string `json:"phone_number"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+
+	// 调用短信服务发送修改手机号验证码
+	if err := smsService.SendVerificationCode(ctx, reqBody.PhoneNumber, consts.RoleAdmin, consts.UpdatePhone); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	writeSuccessResponse(w, map[string]interface{}{
+		"message": "验证码发送成功",
+	})
+}
+
+// updateAdminPhoneHandler 更新当前管理员手机号（需要验证码校验）
+func updateAdminPhoneHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	setResponseHeaders(w)
+
+	// 从上下文获取管理员ID
+	adminId, ok := authen.GetRoleIDFromContext(ctx)
+	if !ok || adminId == "" {
+		writeErrorResponse(w, http.StatusUnauthorized, "未授权")
+		return
+	}
+
+	// 解析请求体
+	var reqBody struct {
+		PhoneNumber string `json:"phone_number"`
+		Code        string `json:"code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+
+	if err := adminAuthService.UpdateAdminPhone(ctx, adminId, reqBody.PhoneNumber, reqBody.Code); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	writeSuccessResponse(w, map[string]interface{}{
+		"message": "手机号修改成功",
 	})
 }
 

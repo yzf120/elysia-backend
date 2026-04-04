@@ -43,6 +43,12 @@ type AdminUserDAO interface {
 	// UpdateAdminUserEmail 更新管理员用户邮箱
 	UpdateAdminUserEmail(adminId string, email string) error
 
+	// UpdateAdminUserPhoneNumber 更新管理员用户手机号
+	UpdateAdminUserPhoneNumber(adminId string, phoneNumber string) error
+
+	// UpdateAdminUserRealName 更新管理员用户真实姓名
+	UpdateAdminUserRealName(adminId string, realName string) error
+
 	// UpdateAdminUserLoginInfo 更新管理员用户登录信息
 	UpdateAdminUserLoginInfo(adminId, ipAddress string, loginTime time.Time) error
 
@@ -186,6 +192,20 @@ func (d *adminUserDAOImpl) UpdateAdminUserEmail(adminId string, email string) er
 	return d.db.Model(&admin.AdminUser{}).
 		Where("admin_id = ?", adminId).
 		Update("email", email).Error
+}
+
+// UpdateAdminUserPhoneNumber 更新管理员用户手机号
+func (d *adminUserDAOImpl) UpdateAdminUserPhoneNumber(adminId string, phoneNumber string) error {
+	return d.db.Model(&admin.AdminUser{}).
+		Where("admin_id = ?", adminId).
+		Update("phone_number", phoneNumber).Error
+}
+
+// UpdateAdminUserRealName 更新管理员用户真实姓名
+func (d *adminUserDAOImpl) UpdateAdminUserRealName(adminId string, realName string) error {
+	return d.db.Model(&admin.AdminUser{}).
+		Where("admin_id = ?", adminId).
+		Update("real_name", realName).Error
 }
 
 // UpdateAdminUserLoginInfo 更新管理员用户登录信息

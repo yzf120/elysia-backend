@@ -779,6 +779,7 @@ type AdminUserInfo struct {
 	CreateTime         string                 `protobuf:"bytes,12,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`                           // 创建时间
 	UpdateTime         string                 `protobuf:"bytes,13,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`                           // 最后更新时间
 	Remark             string                 `protobuf:"bytes,14,opt,name=remark,proto3" json:"remark,omitempty"`                                                     // 备注
+	PhoneNumber        string                 `protobuf:"bytes,15,opt,name=phone_number,json=phoneNumber,proto3" json:"phone_number,omitempty"`                        // 手机号
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -907,6 +908,13 @@ func (x *AdminUserInfo) GetUpdateTime() string {
 func (x *AdminUserInfo) GetRemark() string {
 	if x != nil {
 		return x.Remark
+	}
+	return ""
+}
+
+func (x *AdminUserInfo) GetPhoneNumber() string {
+	if x != nil {
+		return x.PhoneNumber
 	}
 	return ""
 }
