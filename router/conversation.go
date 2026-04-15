@@ -49,6 +49,10 @@ type AIChatRequest struct {
 	UserCode string `json:"user_code,omitempty"`
 	// 用户当前选择的编程语言
 	UserCodeLang string `json:"user_code_lang,omitempty"`
+	// 运行记录加入对话：判题结果（accepted / partial_pass）
+	JudgeResult string `json:"judge_result,omitempty"`
+	// 运行记录加入对话：未通过的测试用例（JSON 字符串）
+	FailedCases string `json:"failed_cases,omitempty"`
 }
 
 // ChatMessage 单条对话消息
@@ -248,7 +252,7 @@ func studentAIChatHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 构建系统提示词
-	systemPrompt := buildSystemPrompt(request.QuestionType, request.ProblemInfo, request.UserCode, request.UserCodeLang)
+	systemPrompt := buildSystemPrompt(request.QuestionType, request.ProblemInfo, request.UserCode, request.UserCodeLang, request.JudgeResult, request.FailedCases)
 
 	// 构建发送给 chat-agent 的消息列表
 	agentMessages := make([]agentpb.AgentChatMessage, 0, len(request.Messages))
@@ -281,12 +285,35 @@ func studentAIChatHandler(w http.ResponseWriter, r *http.Request) {
 		SystemPrompt: systemPrompt,
 	}
 
-	// 透传深度思考参数
+	// 构建 ExtraParams（透传上下文信息给 Agent）
+	agentReq.ExtraParams = map[string]string{
+		"user_id":    studentId,
+		"user_role":  userRole,
+		"session_id": request.SessionID,
+	}
 	if request.EnableThinking {
-		agentReq.ExtraParams = map[string]string{
-			"enable_thinking": "true",
-		}
+		agentReq.ExtraParams["enable_thinking"] = "true"
 		log.Printf("[conversation] 深度思考模式已开启，模型: %s，学生: %s", modelID, studentId)
+	}
+	if request.ProblemID > 0 {
+		agentReq.ExtraParams["problem_id"] = fmt.Sprintf("%d", request.ProblemID)
+	}
+	if request.ProblemInfo != nil {
+		if pBytes, err := json.Marshal(request.ProblemInfo); err == nil {
+			agentReq.ExtraParams["problem_info"] = string(pBytes)
+		}
+	}
+	if request.UserCode != "" {
+		agentReq.ExtraParams["student_code"] = request.UserCode
+		agentReq.ExtraParams["language"] = request.UserCodeLang
+	}
+	// 运行记录加入对话：透传判题结果和未通过用例
+	if request.JudgeResult != "" {
+		agentReq.ExtraParams["judge_result"] = request.JudgeResult
+		log.Printf("[conversation] 运行记录加入对话，judge_result: %s，学生: %s", request.JudgeResult, studentId)
+	}
+	if request.FailedCases != "" {
+		agentReq.ExtraParams["failed_cases"] = request.FailedCases
 	}
 
 	agentStream, err := rpc.GetAgentClient().GetProxy().StreamChat(rpcCtx, agentReq)
@@ -306,6 +333,15 @@ func studentAIChatHandler(w http.ResponseWriter, r *http.Request) {
 
 	// 逐个接收 chat-agent 的流式响应，通过 SSE 发送给前端
 	for {
+		// 检查客户端是否已断开（rpcCtx 被取消）
+		select {
+		case <-rpcCtx.Done():
+			log.Printf("[conversation] 客户端已断开，停止接收流式响应，学生: %s", studentId)
+			streamErr = true
+			goto streamEnd
+		default:
+		}
+
 		chunk, err := agentStream.Recv()
 		if err == io.EOF {
 			// 流结束，发送结束事件
@@ -314,9 +350,14 @@ func studentAIChatHandler(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		if err != nil {
-			log.Printf("[conversation] 接收 chat-agent 响应失败: %v", err)
-			fmt.Fprintf(w, "event: error\ndata: %s\n\n", err.Error())
-			flusher.Flush()
+			// 区分客户端主动断开和真正的错误
+			if rpcCtx.Err() != nil {
+				log.Printf("[conversation] 客户端断开导致 RPC 流关闭，学生: %s", studentId)
+			} else {
+				log.Printf("[conversation] 接收 chat-agent 响应失败: %v", err)
+				fmt.Fprintf(w, "event: error\ndata: %s\n\n", err.Error())
+				flusher.Flush()
+			}
 			streamErr = true
 			break
 		}
@@ -340,7 +381,13 @@ func studentAIChatHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		fmt.Fprintf(w, "data: %s\n\n", string(chunkData))
+		// 写入 SSE 数据，检查写入错误（客户端断开时写入会失败）
+		_, writeErr := fmt.Fprintf(w, "data: %s\n\n", string(chunkData))
+		if writeErr != nil {
+			log.Printf("[conversation] SSE 写入失败（客户端可能已断开），学生: %s, err: %v", studentId, writeErr)
+			streamErr = true
+			break
+		}
 		flusher.Flush()
 
 		// 如果是最后一个 chunk，退出
@@ -350,40 +397,38 @@ func studentAIChatHandler(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
+streamEnd:
 
 	log.Printf("[conversation] SSE 流式响应完成，学生: %s", studentId)
 
-	// ===== 3. 同步审核 AI 回复（A），然后异步存储 =====
+	// ===== 3. 异步审核 AI 回复 + 存储会话记录 =====
+	// 审核和存储都在 goroutine 中执行，不阻塞 HTTP 连接关闭
 	aiReply := aiReplyBuilder.String()
 	if streamErr || strings.TrimSpace(aiReply) == "" {
 		aiReply = "抱歉，AI 助教暂时无法回答，请稍后再试。"
 		log.Printf("[conversation] AI 回复异常，使用兜底回复，学生: %s", studentId)
 	}
 
-	// 审核 AI 回复内容
-	if strings.TrimSpace(aiReply) != "" {
-		aiModerateCtx, aiModerateCancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer aiModerateCancel()
+	go func() {
+		// 审核 AI 回复内容
+		if strings.TrimSpace(aiReply) != "" {
+			aiModerateCtx, aiModerateCancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer aiModerateCancel()
 
-		aiPureText := stripImageContent(aiReply)
-		if strings.TrimSpace(aiPureText) != "" {
-			aiTextResult, err := contentModerationService.ModerateText(aiModerateCtx, studentId, userRole, request.SessionID, "ai", aiPureText)
-			if err != nil {
-				log.Printf("[conversation] AI回复文本审核异常，学生: %s, err: %v", studentId, err)
-			} else if !aiTextResult.Passed {
-				// AI回复违规，替换为兜底文案
-				log.Printf("[conversation] AI回复违规，使用兜底文案，学生: %s, label: %s", studentId, aiTextResult.Label)
-				// 通过 SSE 补发一条违规提示事件
-				fmt.Fprintf(w, "event: ai_violation\ndata: %s\n\n", aiViolationFallbackReply)
-				flusher.Flush()
-				// 存储时使用兜底文案
-				aiReply = aiViolationFallbackReply
+			aiPureText := stripImageContent(aiReply)
+			if strings.TrimSpace(aiPureText) != "" {
+				aiTextResult, err := contentModerationService.ModerateText(aiModerateCtx, studentId, userRole, request.SessionID, "ai", aiPureText)
+				if err != nil {
+					log.Printf("[conversation] AI回复文本审核异常，学生: %s, err: %v", studentId, err)
+				} else if !aiTextResult.Passed {
+					// AI回复违规，存储时使用兜底文案
+					log.Printf("[conversation] AI回复违规，使用兜底文案，学生: %s, label: %s", studentId, aiTextResult.Label)
+					aiReply = aiViolationFallbackReply
+				}
 			}
 		}
-	}
 
-	// ===== 异步存储会话和对话记录到 session 服务 =====
-	go func() {
+		// 存储会话和对话记录到 session 服务
 
 		sessionSvcCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -663,8 +708,8 @@ func base64Decode(s string) ([]byte, error) {
 }
 
 // buildSystemPrompt 根据问题类型和题目信息构建系统提示词
-func buildSystemPrompt(questionType string, problemInfo *ProblemContext, userCode string, userCodeLang string) string {
-	basePrompt := "你是一位专业的编程助教，擅长帮助学生理解算法和编程问题。请用清晰、易懂的方式回答学生的问题，可以给出思路提示，但不要直接给出完整答案，鼓励学生自己思考。"
+func buildSystemPrompt(questionType string, problemInfo *ProblemContext, userCode string, userCodeLang string, judgeResult string, failedCases string) string {
+	basePrompt := "你是一位专业的编程助教，擅长帮助学生理解算法和编程问题。请用清晰、易懂的方式回答学生的问题，可以给出思路提示，但不要直接给出完整答案，鼓励学生自己思考。回复格式要求：禁止使用任何标题格式（不要用 #、##、### 等标题标记），禁止使用 LaTeX 数学公式（不要用 \\[...\\]、\\(...\\)、$...$ 等语法，数学表达式请用纯文本描述如 f(n) = f(n-1) + f(n-2)），用自然段落组织内容，可以用加粗强调关键词、用列表梳理步骤、用代码块展示代码。"
 
 	if questionType == "algorithm_problem" && problemInfo != nil {
 		problemDesc := "\n\n【当前题目信息】\n"
@@ -697,6 +742,31 @@ func buildSystemPrompt(questionType string, problemInfo *ProblemContext, userCod
 			problemDesc += "相关标签：" + tags + "\n"
 		}
 		problemDesc += "\n请结合以上题目信息，帮助学生理解题意、分析思路，但不要直接给出完整代码解答。"
+
+		// 加入运行记录信息（判题结果和未通过用例）
+		if judgeResult != "" {
+			judgeLabel := judgeResult
+			switch judgeResult {
+			case "accepted":
+				judgeLabel = "全部通过"
+			case "partial_pass":
+				judgeLabel = "部分通过"
+			case "wrong_answer":
+				judgeLabel = "答案错误"
+			case "compile_error":
+				judgeLabel = "编译错误"
+			case "runtime_error":
+				judgeLabel = "运行时错误"
+			case "time_limit_exceeded":
+				judgeLabel = "超时"
+			}
+			problemDesc += "\n\n【运行记录 - 判题结果：" + judgeLabel + "】\n"
+			problemDesc += "学生已将运行记录加入对话，请结合以下判题信息分析问题。\n"
+			if failedCases != "" {
+				problemDesc += "未通过的测试用例详情：\n```json\n" + failedCases + "\n```\n"
+				problemDesc += "请根据以上未通过的测试用例，分析学生代码的问题所在，给出修改建议。\n"
+			}
+		}
 
 		// 加入用户当前IDE中的代码作为上下文
 		if userCode != "" {
