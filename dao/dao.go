@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/yzf120/elysia-backend/config"
+	"github.com/yzf120/elysia-backend/model/ai_model"
 	"github.com/yzf120/elysia-backend/model/content_security"
 	"github.com/yzf120/elysia-backend/model/intent"
 	"gorm.io/driver/mysql"
@@ -67,6 +68,7 @@ func autoMigrate() error {
 		&intent.IntentDict{},
 		&intent.IntentPromptTemplate{},
 		&intent.UserIntentRecord{},
+		&ai_model.AIModelConfig{},
 	)
 }
 

@@ -33,6 +33,10 @@ func Init() {
 	contentModerationService = service.NewContentModerationService()
 	intentService = service.NewIntentService()
 	materialService = service.NewMaterialService()
+	aiModelConfigService = service.NewAIModelConfigService()
+
+	// 初始化默认模型配置（首次启动时插入默认数据）
+	aiModelConfigService.InitDefaultModels()
 }
 
 func RegisterRouter(router *mux.Router) {
@@ -100,6 +104,9 @@ func registerApiRouters(publicRouter *mux.Router, protectedRouter *mux.Router) {
 
 	// Dashboard监控接口（管理员）
 	RegisterDashboardRoutes(protectedRouter)
+
+	// AI模型配置管理接口（管理员）
+	RegisterAIModelConfigRoutes(protectedRouter)
 
 }
 

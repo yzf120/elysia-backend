@@ -85,7 +85,7 @@ func registerConversation(router *mux.Router) {
 	router.HandleFunc("/student/ai/sessions/{sessionId}/messages", studentAISessionMessagesHandler).Methods("GET", "OPTIONS")
 }
 
-// studentAIModelsHandler 查询支持的模型列表
+// studentAIModelsHandler 查询支持的模型列表（自动过滤管理员禁用的模型）
 // GET /student/ai/models
 func studentAIModelsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "OPTIONS" {
@@ -111,6 +111,28 @@ func studentAIModelsHandler(w http.ResponseWriter, r *http.Request) {
 			"data":  nil,
 		})
 		return
+	}
+
+	// 从数据库查询禁用的模型ID列表，过滤掉禁用的模型
+	if aiModelConfigService != nil {
+		disabledIds, err := aiModelConfigService.ListDisabledModelIds()
+		if err != nil {
+			log.Printf("[conversation] 查询禁用模型列表失败: %v", err)
+			// 查询失败不阻断，返回全量模型
+		} else if len(disabledIds) > 0 {
+			disabledSet := make(map[string]bool, len(disabledIds))
+			for _, id := range disabledIds {
+				disabledSet[id] = true
+			}
+			// 过滤掉禁用的模型
+			filteredModels := make([]agentpb.AgentModelInfo, 0, len(resp.Models))
+			for _, m := range resp.Models {
+				if !disabledSet[m.ModelID] {
+					filteredModels = append(filteredModels, m)
+				}
+			}
+			resp.Models = filteredModels
+		}
 	}
 
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -365,6 +387,12 @@ func studentAIChatHandler(w http.ResponseWriter, r *http.Request) {
 		// 累积 AI 回复内容
 		if chunk.Content != "" {
 			aiReplyBuilder.WriteString(chunk.Content)
+		}
+
+		// 过滤无意义的空 chunk（content 为空且不是结束标记），避免向前端发送大量无用数据
+		if chunk.Content == "" && !chunk.IsEnd && chunk.FinishReason == "" &&
+			chunk.PromptTokens == 0 && chunk.CompletionTokens == 0 && chunk.TotalTokens == 0 {
+			continue
 		}
 
 		// 将 chunk 序列化为 JSON 并通过 SSE 发送
