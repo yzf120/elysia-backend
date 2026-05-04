@@ -182,8 +182,22 @@ func (s *StudentProfileService) UpdateProfileAfterSubmit(studentId string) {
 		return
 	}
 
-	log.Printf("[StudentProfile] 画像更新成功: student_id=%s, submissions=%d, accept_rate=%.2f%%, solved=%d, level=%s",
-		studentId, totalSubmissions, acceptRate*100, solvedCount, difficultyLevel)
+	// 计算并打印能力等级的具体分值
+	scoreAcceptRate := acceptRate * 40
+	scoreSolved := float64(solvedCount) / 30.0
+	if scoreSolved > 1.0 {
+		scoreSolved = 1.0
+	}
+	scoreSolved *= 30
+	scoreSubmit := float64(totalSubmissions) / 100.0
+	if scoreSubmit > 1.0 {
+		scoreSubmit = 1.0
+	}
+	scoreSubmit *= 30
+	totalScore := scoreAcceptRate + scoreSolved + scoreSubmit
+
+	log.Printf("[StudentProfile] 画像更新成功: student_id=%s, submissions=%d, accept_rate=%.2f%%, solved=%d, level=%s (综合分=%.1f: 通过率分=%.1f + 解题分=%.1f + 提交分=%.1f)",
+		studentId, totalSubmissions, acceptRate*100, solvedCount, difficultyLevel, totalScore, scoreAcceptRate, scoreSolved, scoreSubmit)
 }
 
 // calcCommonErrors 计算常见错误类型（按频率排序，取 Top 3）

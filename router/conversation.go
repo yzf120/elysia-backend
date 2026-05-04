@@ -270,7 +270,7 @@ func studentAIChatHandler(w http.ResponseWriter, r *http.Request) {
 	// 选择模型
 	modelID := request.ModelID
 	if modelID == "" {
-		modelID = "doubao-seed-1-6-lite-251015" // 默认豆包模型
+		modelID = "doubao-seed-2-0-lite-260215" // 默认豆包模型
 	}
 
 	// 构建系统提示词

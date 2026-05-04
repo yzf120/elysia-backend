@@ -236,6 +236,12 @@ type AgentServiceClientProxy interface {
 
 	// ListModels 查询支持的模型列表
 	ListModels(ctx context.Context, req *AgentListModelsRequest, opts ...client.Option) (*AgentListModelsResponse, error)
+
+	// 知识库管理 RPC 接口
+	StoreKnowledge(ctx context.Context, req *StoreKnowledgeRequest, opts ...client.Option) (*StoreKnowledgeResponse, error)
+	DeleteKnowledge(ctx context.Context, req *DeleteKnowledgeRequest, opts ...client.Option) (*DeleteKnowledgeResponse, error)
+	ListKnowledge(ctx context.Context, req *ListKnowledgeRequest, opts ...client.Option) (*ListKnowledgeResponse, error)
+	SearchKnowledge(ctx context.Context, req *SearchKnowledgeRequest, opts ...client.Option) (*SearchKnowledgeResponse, error)
 }
 
 // AgentService_StreamChatClient 客户端流式接口
@@ -414,6 +420,86 @@ func (c *AgentServiceClientProxyImpl) ListModels(ctx context.Context, req *Agent
 	callopts = append(callopts, c.opts...)
 	callopts = append(callopts, opts...)
 	rsp := &AgentListModelsResponse{}
+	if err := c.client.Invoke(ctx, req, rsp, callopts...); err != nil {
+		return nil, err
+	}
+	return rsp, nil
+}
+
+func (c *AgentServiceClientProxyImpl) StoreKnowledge(ctx context.Context, req *StoreKnowledgeRequest, opts ...client.Option) (*StoreKnowledgeResponse, error) {
+	ctx, msg := codec.WithCloneMessage(ctx)
+	defer codec.PutBackMessage(msg)
+	msg.WithClientRPCName("/trpc.elysia.chat_agent.agent.AgentService/StoreKnowledge")
+	msg.WithCalleeServiceName(AgentServiceServer_ServiceDesc.ServiceName)
+	msg.WithCalleeApp("")
+	msg.WithCalleeServer("")
+	msg.WithCalleeService("AgentService")
+	msg.WithCalleeMethod("StoreKnowledge")
+	msg.WithSerializationType(codec.SerializationTypeJSON)
+	callopts := make([]client.Option, 0, len(c.opts)+len(opts))
+	callopts = append(callopts, c.opts...)
+	callopts = append(callopts, opts...)
+	rsp := &StoreKnowledgeResponse{}
+	if err := c.client.Invoke(ctx, req, rsp, callopts...); err != nil {
+		return nil, err
+	}
+	return rsp, nil
+}
+
+func (c *AgentServiceClientProxyImpl) DeleteKnowledge(ctx context.Context, req *DeleteKnowledgeRequest, opts ...client.Option) (*DeleteKnowledgeResponse, error) {
+	ctx, msg := codec.WithCloneMessage(ctx)
+	defer codec.PutBackMessage(msg)
+	msg.WithClientRPCName("/trpc.elysia.chat_agent.agent.AgentService/DeleteKnowledge")
+	msg.WithCalleeServiceName(AgentServiceServer_ServiceDesc.ServiceName)
+	msg.WithCalleeApp("")
+	msg.WithCalleeServer("")
+	msg.WithCalleeService("AgentService")
+	msg.WithCalleeMethod("DeleteKnowledge")
+	msg.WithSerializationType(codec.SerializationTypeJSON)
+	callopts := make([]client.Option, 0, len(c.opts)+len(opts))
+	callopts = append(callopts, c.opts...)
+	callopts = append(callopts, opts...)
+	rsp := &DeleteKnowledgeResponse{}
+	if err := c.client.Invoke(ctx, req, rsp, callopts...); err != nil {
+		return nil, err
+	}
+	return rsp, nil
+}
+
+func (c *AgentServiceClientProxyImpl) ListKnowledge(ctx context.Context, req *ListKnowledgeRequest, opts ...client.Option) (*ListKnowledgeResponse, error) {
+	ctx, msg := codec.WithCloneMessage(ctx)
+	defer codec.PutBackMessage(msg)
+	msg.WithClientRPCName("/trpc.elysia.chat_agent.agent.AgentService/ListKnowledge")
+	msg.WithCalleeServiceName(AgentServiceServer_ServiceDesc.ServiceName)
+	msg.WithCalleeApp("")
+	msg.WithCalleeServer("")
+	msg.WithCalleeService("AgentService")
+	msg.WithCalleeMethod("ListKnowledge")
+	msg.WithSerializationType(codec.SerializationTypeJSON)
+	callopts := make([]client.Option, 0, len(c.opts)+len(opts))
+	callopts = append(callopts, c.opts...)
+	callopts = append(callopts, opts...)
+	rsp := &ListKnowledgeResponse{}
+	if err := c.client.Invoke(ctx, req, rsp, callopts...); err != nil {
+		return nil, err
+	}
+	return rsp, nil
+}
+
+func (c *AgentServiceClientProxyImpl) SearchKnowledge(ctx context.Context, req *SearchKnowledgeRequest, opts ...client.Option) (*SearchKnowledgeResponse, error) {
+	ctx, msg := codec.WithCloneMessage(ctx)
+	defer codec.PutBackMessage(msg)
+	msg.WithClientRPCName("/trpc.elysia.chat_agent.agent.AgentService/SearchKnowledge")
+	msg.WithCalleeServiceName(AgentServiceServer_ServiceDesc.ServiceName)
+	msg.WithCalleeApp("")
+	msg.WithCalleeServer("")
+	msg.WithCalleeService("AgentService")
+	msg.WithCalleeMethod("SearchKnowledge")
+	msg.WithSerializationType(codec.SerializationTypeJSON)
+	callopts := make([]client.Option, 0, len(c.opts)+len(opts))
+	callopts = append(callopts, c.opts...)
+	callopts = append(callopts, opts...)
+	rsp := &SearchKnowledgeResponse{}
 	if err := c.client.Invoke(ctx, req, rsp, callopts...); err != nil {
 		return nil, err
 	}

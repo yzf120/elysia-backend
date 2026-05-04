@@ -24,8 +24,8 @@ func NewAIModelConfigService() *AIModelConfigService {
 func (s *AIModelConfigService) InitDefaultModels() {
 	defaultModels := []*ai_model.AIModelConfig{
 		{
-			ModelId:     "doubao-seed-1-6-lite-251015",
-			ModelName:   "Doubao-Seed-1.6-lite",
+			ModelId:     "doubao-seed-2-0-lite-260215",
+			ModelName:   "Doubao-Seed-2.0-lite",
 			Provider:    "doubao",
 			Description: "豆包多模态模型，支持深度思考，适合快速响应场景",
 			IsEnabled:   1,

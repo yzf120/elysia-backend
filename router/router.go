@@ -108,6 +108,9 @@ func registerApiRouters(publicRouter *mux.Router, protectedRouter *mux.Router) {
 	// AI模型配置管理接口（管理员）
 	RegisterAIModelConfigRoutes(protectedRouter)
 
+	// 知识库管理接口（管理员）
+	RegisterKnowledgeRoutes(protectedRouter)
+
 }
 
 // registerLogout 注册登出接口（需要认证）

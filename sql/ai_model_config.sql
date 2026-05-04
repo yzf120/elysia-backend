@@ -5,7 +5,7 @@
 -- ============================================================
 CREATE TABLE IF NOT EXISTS `ai_model_config` (
     `id`          INT          NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    `model_id`    VARCHAR(100) NOT NULL COMMENT '模型ID（如 doubao-seed-1-6-lite-251015）',
+`model_id`    VARCHAR(100) NOT NULL COMMENT '模型ID（如 doubao-seed-2-0-lite-260215）',
     `model_name`  VARCHAR(100) NOT NULL COMMENT '模型显示名称',
     `provider`    VARCHAR(50)  NOT NULL COMMENT '提供商：doubao, qwen',
     `description` VARCHAR(500) DEFAULT NULL COMMENT '模型描述',
@@ -20,5 +20,5 @@ CREATE TABLE IF NOT EXISTS `ai_model_config` (
 
 -- 初始化默认模型数据
 INSERT IGNORE INTO `ai_model_config` (`model_id`, `model_name`, `provider`, `description`, `is_enabled`) VALUES
-('doubao-seed-1-6-lite-251015', 'Doubao-Seed-1.6-lite', 'doubao', '豆包多模态模型，支持深度思考，适合快速响应场景', 1),
+('doubao-seed-2-0-lite-260215', 'Doubao-Seed-2.0-lite', 'doubao', '豆包多模态模型，支持深度思考，适合快速响应场景', 1),
 ('qwen3-omni-flash', 'Qwen3-Omni-Flash', 'qwen', '通义千问全模态模型，Thinker–Talker 架构，支持深度思考', 1);

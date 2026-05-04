@@ -45,7 +45,7 @@ func adminListAIModelsHandler(w http.ResponseWriter, r *http.Request) {
 
 // adminToggleAIModelHandler 切换模型启用/禁用状态
 // POST /admin/ai-models/toggle
-// Body: {"model_id": "doubao-seed-1-6-lite-251015", "enabled": true}
+// Body: {"model_id": "doubao-seed-2-0-lite-260215", "enabled": true}
 func adminToggleAIModelHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "OPTIONS" {
 		w.Header().Set("Access-Control-Allow-Origin", "*")

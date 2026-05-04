@@ -7,7 +7,7 @@ import (
 // AIModelConfig AI模型配置数据模型
 type AIModelConfig struct {
 	Id          int       `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
-	ModelId     string    `gorm:"column:model_id;type:varchar(100);uniqueIndex;not null" json:"model_id"` // 模型ID（如 doubao-seed-1-6-lite-251015）
+	ModelId     string    `gorm:"column:model_id;type:varchar(100);uniqueIndex;not null" json:"model_id"` // 模型ID（如 doubao-seed-2-0-lite-260215）
 	ModelName   string    `gorm:"column:model_name;type:varchar(100);not null" json:"model_name"`         // 模型显示名称
 	Provider    string    `gorm:"column:provider;type:varchar(50);not null" json:"provider"`              // 提供商：doubao, qwen
 	Description string    `gorm:"column:description;type:varchar(500)" json:"description"`                // 模型描述
