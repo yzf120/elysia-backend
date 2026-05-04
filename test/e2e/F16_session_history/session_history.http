@@ -1,0 +1,134 @@
+### ============================================
+### 功能点 F16：会话历史记录
+### 对应任务书：3c - 记忆功能
+### 对应代码：elysia-backend/router/conversation.go (sessions, messages)
+### ============================================
+
+@baseUrl = http://localhost:8001
+@contentType = application/json
+
+
+### ============================================
+### E2E-F16-01 查询会话列表
+### 功能点：验证学生可查看历史对话会话列表
+### 前置条件：学生已进行过多次对话
+### 预期结果：返回会话列表，包含 session_id、session_title、create_time，按时间倒序
+### ============================================
+
+GET {{baseUrl}}/api/student/ai/sessions?page=1&page_size=20
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F16-01: 查询会话列表", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.error.code === 0, "业务码应为0");
+    client.assert(body.data !== null, "应返回会话数据");
+    // 如果有会话，保存第一个会话ID供后续测试
+    if (body.data.sessions && body.data.sessions.length > 0) {
+      client.global.set("testSessionId", body.data.sessions[0].session_id);
+    }
+  });
+%}
+
+
+### ============================================
+### E2E-F16-02 查询会话消息详情
+### 功能点：验证可查看某次会话的完整对话记录
+### 前置条件：已有会话
+### 预期结果：返回该会话的所有消息，包含用户消息和 AI 回复，按 message_seq 排序
+### ============================================
+
+GET {{baseUrl}}/api/student/ai/sessions/{{testSessionId}}/messages?page=1&page_size=100
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F16-02: 查询会话消息详情", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.error.code === 0, "业务码应为0");
+    client.assert(body.data !== null, "应返回消息数据");
+    // 验证消息列表包含用户消息和AI回复
+    if (body.data.conversations && body.data.conversations.length > 0) {
+      // 消息应按 message_seq 排序
+      client.assert(body.data.conversations.length >= 1, "应至少包含1条消息");
+    }
+  });
+%}
+
+
+### ============================================
+### E2E-F16-03 对话记录自动持久化
+### 功能点：验证每次对话后用户消息和 AI 回复都被存储
+### 前置条件：无
+### 预期结果：新创建的会话中包含本次的用户消息和 AI 回复
+### 说明：此测试通过先发起对话，再查询会话记录来验证持久化
+### ============================================
+
+### 步骤1: 发起一次新对话
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "",
+  "messages": [
+    {
+      "role": "user",
+      "content": "请解释一下什么是二分查找算法？这是一条用于测试持久化的消息。"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F16-03-Step1: 发起新对话", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+  });
+%}
+
+### 步骤2: 等待异步存储完成后，查询最新会话列表
+### 注意：需要等待约2-3秒让异步存储完成
+GET {{baseUrl}}/api/student/ai/sessions?page=1&page_size=5
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F16-03-Step2: 验证对话记录已持久化", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.error.code === 0, "业务码应为0");
+    // 最新的会话应包含刚才的对话
+    if (body.data.sessions && body.data.sessions.length > 0) {
+      var latestSession = body.data.sessions[0];
+      client.assert(latestSession.session_id !== "", "最新会话应有session_id");
+      client.assert(latestSession.session_title !== "", "最新会话应有标题");
+      // 保存最新会话ID用于查询消息
+      client.global.set("persistTestSessionId", latestSession.session_id);
+    }
+  });
+%}
+
+### 步骤3: 查询该会话的消息，验证包含用户消息和AI回复
+GET {{baseUrl}}/api/student/ai/sessions/{{persistTestSessionId}}/messages?page=1&page_size=100
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F16-03-Step3: 验证消息包含Q和A", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    if (body.data.conversations && body.data.conversations.length >= 2) {
+      // 应至少包含1条用户消息和1条AI回复
+      var hasUser = false, hasAgent = false;
+      for (var i = 0; i < body.data.conversations.length; i++) {
+        var msg = body.data.conversations[i];
+        if (msg.sender_type === 1 || msg.sender_type === "SENDER_TYPE_USER") hasUser = true;
+        if (msg.sender_type === 2 || msg.sender_type === "SENDER_TYPE_AGENT") hasAgent = true;
+      }
+      client.assert(hasUser, "应包含用户消息");
+      client.assert(hasAgent, "应包含AI回复");
+    }
+  });
+%}

@@ -49,6 +49,14 @@ func (s *TeacherAuthService) LoginWithSMS(ctx context.Context, phoneNumber, code
 		return nil, "", errs.NewCommonError(errs.ErrBadRequest, "账号已被禁用")
 	}
 
+	// 检查审核状态
+	if teacherModel.VerificationStatus == 0 {
+		return nil, "", errs.NewCommonError(errs.ErrBadRequest, "账号尚未通过审核，请等待管理员审核")
+	}
+	if teacherModel.VerificationStatus == 2 {
+		return nil, "", errs.NewCommonError(errs.ErrBadRequest, "账号审核未通过，请联系管理员")
+	}
+
 	// 生成登录令牌
 	token, err := s.jwtService.GenerateToken(teacherModel.TeacherId)
 	if err != nil {
@@ -91,6 +99,14 @@ func (s *TeacherAuthService) LoginWithPassword(ctx context.Context, employeeNumb
 	// 检查教师状态
 	if teacherModel.Status == 2 {
 		return nil, "", errs.NewCommonError(errs.ErrBadRequest, "账号已被禁用")
+	}
+
+	// 检查审核状态
+	if teacherModel.VerificationStatus == 0 {
+		return nil, "", errs.NewCommonError(errs.ErrBadRequest, "账号尚未通过审核，请等待管理员审核")
+	}
+	if teacherModel.VerificationStatus == 2 {
+		return nil, "", errs.NewCommonError(errs.ErrBadRequest, "账号审核未通过，请联系管理员")
 	}
 
 	// 生成登录令牌

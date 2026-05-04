@@ -1,0 +1,62 @@
+### ============================================
+### 功能点 F20：学习统计数据
+### 对应任务书：3c - 记忆功能
+### 对应代码：elysia-backend/router/student.go (getStudentStudyStatsHandler)
+### ============================================
+
+@baseUrl = http://localhost:8001
+@contentType = application/json
+
+
+### ============================================
+### E2E-F20-01 查询学习统计数据
+### 功能点：验证系统汇总学生的学习数据
+### 前置条件：学生已加入班级并有做题记录
+### 预期结果：返回 completed_courses、total_courses、completed_chapters、
+###          total_chapters、ai_sessions
+### ============================================
+
+GET {{baseUrl}}/api/student/profile/study-stats
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F20-01: 查询学习统计数据", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    var data = body.data || body;
+    // 验证返回了学习统计字段
+    client.assert(data.completed_courses !== undefined, "应包含completed_courses");
+    client.assert(data.total_courses !== undefined, "应包含total_courses");
+    client.assert(data.completed_chapters !== undefined, "应包含completed_chapters");
+    client.assert(data.total_chapters !== undefined, "应包含total_chapters");
+    client.assert(data.ai_sessions !== undefined, "应包含ai_sessions");
+  });
+%}
+
+
+### ============================================
+### E2E-F20-02 查询班级完成度
+### 功能点：验证各班级的章节完成进度
+### 前置条件：学生已加入多个班级
+### 预期结果：返回每个班级的 total_chapters、completed_chapters、progress_percent
+### ============================================
+
+GET {{baseUrl}}/api/student/class-progress
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F20-02: 查询班级完成度", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    var data = body.data || body;
+    // 验证返回了班级进度列表
+    if (data.classes && data.classes.length > 0) {
+      var firstClass = data.classes[0];
+      client.assert(firstClass.total_chapters !== undefined, "应包含total_chapters");
+      client.assert(firstClass.completed_chapters !== undefined, "应包含completed_chapters");
+      client.assert(firstClass.progress_percent !== undefined, "应包含progress_percent");
+    }
+  });
+%}

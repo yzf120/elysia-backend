@@ -63,9 +63,14 @@ func (s *ContentModerationService) ModerateText(ctx context.Context, userId, use
 
 	textResp, err := accessClient.TextModeration(ctx, textReq)
 	if err != nil {
-		// 审核服务调用失败时，默认放行（避免影响正常使用），但记录日志
-		log.Printf("[ContentModeration] 文本审核调用失败，默认放行，userId: %s, sender: %s, err: %v", userId, senderType, err)
-		return &ModerationResult{Passed: true, Suggestion: "Pass", Message: ""}, nil
+		// 审核服务调用失败时（含超时），默认拦截，因为敏感内容往往导致审核耗时更长
+		log.Printf("[ContentModeration] 文本审核调用失败，默认拦截，userId: %s, sender: %s, err: %v", userId, senderType, err)
+		return &ModerationResult{
+			Passed:     false,
+			Suggestion: "Block",
+			Label:      "ServiceError",
+			Message:    "内容审核服务暂时不可用，请稍后再试。",
+		}, nil
 	}
 
 	result := &ModerationResult{
@@ -120,8 +125,14 @@ func (s *ContentModerationService) ModerateImage(ctx context.Context, userId, us
 
 	imgResp, err := accessClient.ImageModeration(ctx, imgReq)
 	if err != nil {
-		log.Printf("[ContentModeration] 图片审核调用失败，默认放行，userId: %s, sender: %s, err: %v", userId, senderType, err)
-		return &ModerationResult{Passed: true, Suggestion: "Pass"}, nil
+		// 审核服务调用失败时（含超时），默认拦截
+		log.Printf("[ContentModeration] 图片审核调用失败，默认拦截，userId: %s, sender: %s, err: %v", userId, senderType, err)
+		return &ModerationResult{
+			Passed:     false,
+			Suggestion: "Block",
+			Label:      "ServiceError",
+			Message:    "内容审核服务暂时不可用，请稍后再试。",
+		}, nil
 	}
 
 	result := &ModerationResult{

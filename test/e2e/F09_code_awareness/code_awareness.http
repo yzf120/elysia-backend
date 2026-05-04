@@ -1,0 +1,83 @@
+### ============================================
+### 功能点 F9：全链路数据感知 — 源代码感知
+### 对应任务书：3b - 智能助教设计与实现
+### 对应代码：elysia-backend/router/conversation.go (UserCode, UserCodeLang)
+### ============================================
+
+@baseUrl = http://localhost:8001
+@contentType = application/json
+
+
+### ============================================
+### E2E-F9-01 携带源代码的对话
+### 功能点：验证 AI 能感知学生 IDE 中的源代码
+### 前置条件：学生已登录，正在做题
+### 预期结果：AI 回复中引用了学生代码的具体行或逻辑，给出针对性分析
+### ============================================
+
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "",
+  "problem_id": {{testProblemId}},
+  "question_type": "algorithm_problem",
+  "user_code": "#include <iostream>\nusing namespace std;\nint main() {\n    int n, target;\n    cin >> n >> target;\n    int arr[100];\n    for (int i = 0; i < n; i++) cin >> arr[i];\n    for (int i = 0; i < n; i++) {\n        for (int j = 0; j < n; j++) {  // 这里应该是 j = i+1\n            if (arr[i] + arr[j] == target) {\n                cout << i << \" \" << j << endl;\n                return 0;\n            }\n        }\n    }\n    return 0;\n}",
+  "user_code_lang": "cpp",
+  "messages": [
+    {
+      "role": "user",
+      "content": "我的代码哪里有问题？为什么输出结果不对？"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F9-01: 携带源代码的对话", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    // AI 应能感知到学生代码并给出针对性分析
+  });
+%}
+
+
+### ============================================
+### E2E-F9-02 携带题目信息的对话
+### 功能点：验证 AI 能感知当前题目上下文
+### 前置条件：学生已登录，正在做题
+### 预期结果：AI 回复结合了题目描述进行分析
+### ============================================
+
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "",
+  "problem_id": {{testProblemId}},
+  "question_type": "algorithm_problem",
+  "problem_info": {
+    "id": {{testProblemId}},
+    "title": "两数之和",
+    "difficulty": "easy",
+    "description": "给定一个整数数组 nums 和一个整数目标值 target，请你在该数组中找出和为目标值 target 的那两个整数，并返回它们的数组下标。",
+    "input_format": "第一行输入n和target，第二行输入n个整数",
+    "output_format": "输出两个下标，空格分隔",
+    "tags": ["数组", "哈希表"],
+    "time_limit": 1000,
+    "memory_limit": 256
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "这道题的解题思路是什么？有哪些方法可以解决？"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F9-02: 携带题目信息的对话", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    // AI 应结合题目信息给出思路分析
+  });
+%}

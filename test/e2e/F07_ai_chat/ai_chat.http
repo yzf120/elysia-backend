@@ -1,0 +1,164 @@
+### ============================================
+### 功能点 F7：AI 文字对话交互（SSE 流式）
+### 对应任务书：3b - 智能助教设计与实现
+### 对应代码：elysia-backend/router/conversation.go
+### ============================================
+
+@baseUrl = http://localhost:8001
+@contentType = application/json
+
+
+### ============================================
+### E2E-F7-01 首轮对话创建新会话
+### 功能点：验证首次对话自动创建会话
+### 前置条件：学生已登录
+### 预期结果：返回 SSE 流式响应，Content-Type 为 text/event-stream，最终收到 event: done
+### ============================================
+
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "",
+  "messages": [
+    {
+      "role": "user",
+      "content": "你好，请问什么是动态规划？"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F7-01: 首轮对话创建新会话（SSE流式）", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    // SSE 响应的 Content-Type 应为 text/event-stream
+    var contentType = response.headers.valueOf("Content-Type");
+    client.assert(contentType.indexOf("text/event-stream") !== -1 || contentType.indexOf("application/json") !== -1,
+      "Content-Type应为text/event-stream或application/json");
+  });
+%}
+
+
+### ============================================
+### E2E-F7-02 多轮对话保持上下文
+### 功能点：验证后续对话携带 session_id 可保持上下文
+### 前置条件：已有会话
+### 预期结果：AI 回复与上下文相关，SSE 流正常结束
+### ============================================
+
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "{{testSessionId}}",
+  "messages": [
+    {
+      "role": "user",
+      "content": "你好，请问什么是动态规划？"
+    },
+    {
+      "role": "assistant",
+      "content": "动态规划是一种通过将复杂问题分解为更小的子问题来求解的算法设计方法..."
+    },
+    {
+      "role": "user",
+      "content": "能举一个具体的例子吗？比如斐波那契数列"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F7-02: 多轮对话保持上下文", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+  });
+%}
+
+
+### ============================================
+### E2E-F7-03 查询支持的模型列表
+### 功能点：验证可获取可用的 AI 模型列表
+### 前置条件：学生已登录
+### 预期结果：返回模型列表，每个模型包含 model_id 和名称
+### ============================================
+
+GET {{baseUrl}}/api/student/ai/models
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F7-03: 查询支持的模型列表", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.error.code === 0, "业务码应为0");
+    client.assert(body.data !== null, "应返回模型数据");
+    client.assert(body.data.models !== undefined, "应返回models列表");
+    if (Array.isArray(body.data.models) && body.data.models.length > 0) {
+      var firstModel = body.data.models[0];
+      client.assert(firstModel.ModelID !== undefined || firstModel.model_id !== undefined, "模型应包含model_id");
+      // 保存一个非默认模型ID
+      if (body.data.models.length > 1) {
+        client.global.set("alternateModelId", body.data.models[1].ModelID || body.data.models[1].model_id);
+      }
+    }
+  });
+%}
+
+
+### ============================================
+### E2E-F7-04 切换模型对话
+### 功能点：验证可指定不同模型进行对话
+### 前置条件：学生已登录
+### 预期结果：SSE 流式响应正常返回
+### ============================================
+
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "",
+  "model_id": "{{alternateModelId}}",
+  "messages": [
+    {
+      "role": "user",
+      "content": "请用一句话解释什么是递归"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F7-04: 切换模型对话", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+  });
+%}
+
+
+### ============================================
+### E2E-F7-05 深度思考模式
+### 功能点：验证开启深度思考模式后的对话
+### 前置条件：学生已登录
+### 预期结果：SSE 流式响应正常返回
+### ============================================
+
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "",
+  "enable_thinking": true,
+  "messages": [
+    {
+      "role": "user",
+      "content": "请深入分析快速排序的时间复杂度，包括最好、最坏和平均情况"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F7-05: 深度思考模式对话", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+  });
+%}

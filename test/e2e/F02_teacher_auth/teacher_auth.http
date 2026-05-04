@@ -1,0 +1,116 @@
+### ============================================
+### 功能点 F2：教师注册与登录
+### 对应任务书：3a - 与现有OJ平台的集成
+### 对应代码：elysia-backend/router/teacher.go
+### ============================================
+
+@baseUrl = http://localhost:8001
+@contentType = application/json
+
+
+### ============================================
+### E2E-F2-01 教师注册（需审核）
+### 功能点：验证教师提交注册申请后需管理员审核
+### 前置条件：无
+### 预期结果：返回注册成功，教师状态为"待审核"
+### ============================================
+
+POST {{baseUrl}}/api/register
+Content-Type: {{contentType}}
+
+{
+  "real_name": "测试教师",
+  "employee_number": "T20240001",
+  "phone_number": "13900139000",
+  "password": "Test@123456",
+  "department": "计算机学院",
+  "school_email": "teacher_test@csu.edu.cn",
+  "teaching_subjects": ["算法设计与分析"]
+}
+
+> {%
+  client.test("E2E-F2-01: 教师注册成功（待审核）", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    // 注册成功：code=0, message含"注册成功"；或已注册：code=1, message含"已被注册"
+    var isSuccess = (body.code === 0 && body.message.indexOf("注册成功") !== -1);
+    var isAlreadyRegistered = (body.code === 1 && body.message.indexOf("已被注册") !== -1);
+    client.assert(isSuccess || isAlreadyRegistered, "应返回注册成功或已注册提示，实际: " + body.message);
+  });
+%}
+
+
+### ============================================
+### E2E-F2-02 教师密码登录
+### 功能点：验证教师通过工号+密码登录
+### 前置条件：教师已注册且已通过审核
+### 预期结果：返回 token 和 user_info
+### ============================================
+
+POST {{baseUrl}}/api/teacher/auth/login-password
+Content-Type: {{contentType}}
+
+{
+  "employee_number": "T20240001",
+  "password": "Test@123456"
+}
+
+> {%
+  client.test("E2E-F2-02: 教师密码登录", function() {
+    client.assert(response.status === 200 || response.status === 400, "HTTP状态码应为200或400");
+    var body = response.body;
+    if (response.status === 200 && body.data && body.data.token) {
+      // 已审核教师登录成功
+      client.assert(body.data.message === "登录成功", "应返回登录成功");
+      client.assert(body.data.token !== null && body.data.token !== "", "应返回有效token");
+      client.assert(body.data.user_info !== null, "应返回user_info");
+      client.global.set("teacherToken", body.data.token);
+      client.global.set("teacherId", body.data.user_info.teacher_id);
+    } else {
+      // 未审核教师登录被拒绝（也是合理结果）
+      var msg = (body.error && body.error.message) || "";
+      client.assert(msg.indexOf("审核") !== -1, "未审核教师应提示审核相关信息，实际: " + msg);
+    }
+  });
+%}
+
+
+### ============================================
+### E2E-F2-03 未审核教师登录
+### 功能点：验证未通过审核的教师无法登录
+### 前置条件：教师已注册但未审核
+### 预期结果：返回错误提示
+### ============================================
+
+### 先注册一个新教师（不审核）
+POST {{baseUrl}}/api/register
+Content-Type: {{contentType}}
+
+{
+  "real_name": "未审核教师",
+  "employee_number": "T20249999",
+  "phone_number": "13900139999",
+  "password": "Test@123456",
+  "department": "计算机学院",
+  "school_email": "unverified@csu.edu.cn"
+}
+
+### 尝试登录（应失败）
+POST {{baseUrl}}/api/teacher/auth/login-password
+Content-Type: {{contentType}}
+
+{
+  "employee_number": "T20249999",
+  "password": "Test@123456"
+}
+
+> {%
+  client.test("E2E-F2-03: 未审核教师登录失败", function() {
+    // 未审核教师登录应返回400错误
+    client.assert(response.status === 400, "HTTP状态码应为400");
+    var body = response.body;
+    // 检查是否包含审核相关的错误信息
+    var msg = (body.error && body.error.message) || "";
+    client.assert(msg.indexOf("审核") !== -1, "应提示教师账号未通过审核，实际: " + msg);
+  });
+%}

@@ -1,0 +1,85 @@
+### ============================================
+### 功能点 F19：问答行为画像（记录问答行为生成画像）
+### 对应任务书：3c - 记忆功能
+### 对应代码：elysia-chat-agent/agent/qa_profile_agent.go
+### ============================================
+
+@baseUrl = http://localhost:8001
+@contentType = application/json
+
+
+### ============================================
+### E2E-F19-01 对话后自动记录问答行为
+### 功能点：验证每次 AI 对话后异步记录问答行为
+### 前置条件：学生已登录
+### 预期结果：数据库 oj_qa_behavior 表新增记录，包含 question_summary、
+###          knowledge_tags、is_resolved、difficulty_score
+### 说明：QAProfileAgent 在对话完成后异步分析问答行为，
+###       通过 LLM 提取知识点标签和难度评分
+### ============================================
+
+### 步骤1: 发起一次有明确知识点的对话
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "",
+  "problem_id": {{testProblemId}},
+  "question_type": "algorithm_problem",
+  "problem_info": {
+    "id": {{testProblemId}},
+    "title": "两数之和",
+    "difficulty": "easy",
+    "description": "给定一个整数数组 nums 和一个整数目标值 target"
+  },
+  "user_code": "#include <iostream>\n#include <unordered_map>\nusing namespace std;\nint main() {\n    int n, target;\n    cin >> n >> target;\n    unordered_map<int, int> mp;\n    for (int i = 0; i < n; i++) {\n        int num;\n        cin >> num;\n        if (mp.count(target - num)) {\n            cout << mp[target - num] << \" \" << i;\n            return 0;\n        }\n        mp[num] = i;\n    }\n    return 0;\n}",
+  "user_code_lang": "cpp",
+  "messages": [
+    {
+      "role": "user",
+      "content": "我用哈希表解决了两数之和问题，但不太理解为什么时间复杂度是O(n)，能解释一下吗？"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F19-01: 发起对话触发问答行为记录", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    // 对话完成后，QAProfileAgent 会异步分析并记录问答行为
+    // 需要等待约5秒让异步分析完成
+    // 验证方式：查询数据库 oj_qa_behavior 表确认新增记录
+  });
+%}
+
+
+### ============================================
+### E2E-F19-02 画像注入 AI 对话
+### 功能点：验证 AI 回复时参考了学生画像
+### 前置条件：学生已有做题画像和问答行为记录
+### 预期结果：AI 回复的难度和风格与学生水平匹配
+### 说明：系统在构建 system prompt 时会注入学生画像信息，
+###       包括编程水平、常见错误类型、偏好语言等
+### ============================================
+
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "",
+  "messages": [
+    {
+      "role": "user",
+      "content": "请帮我解释一下什么是图的最短路径算法？"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F19-02: 画像注入AI对话", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    // AI 应根据学生画像调整回复的深度和风格
+    // 如初学者收到更详细的解释，高级学生收到更简洁的回答
+  });
+%}

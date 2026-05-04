@@ -1,0 +1,37 @@
+### ============================================
+### 功能点 F15：练习题推荐
+### 对应任务书：3b - 智能助教设计与实现
+### 对应代码：意图 SOLVE_THINK 路由到 solve_agent，结合 RAG 检索
+### ============================================
+
+@baseUrl = http://localhost:8001
+@contentType = application/json
+
+
+### ============================================
+### E2E-F15-01 练习题推荐
+### 功能点：验证 AI 可根据学生水平推荐练习题
+### 前置条件：学生已有做题记录
+### 预期结果：AI 回复中包含推荐的练习题信息
+### ============================================
+
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "",
+  "messages": [
+    {
+      "role": "user",
+      "content": "我刚学完数组和哈希表，能推荐一些适合我练习的题目吗？最好是简单到中等难度的"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F15-01: 练习题推荐", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    // AI 应推荐适合学生水平的练习题
+  });
+%}

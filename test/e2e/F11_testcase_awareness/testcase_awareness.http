@@ -1,0 +1,89 @@
+### ============================================
+### 功能点 F11：全链路数据感知 — 未通过测试用例感知
+### 对应任务书：3b - 智能助教设计与实现
+### 对应代码：elysia-backend/router/conversation.go (FailedCases, buildSystemPrompt)
+### ============================================
+
+@baseUrl = http://localhost:8001
+@contentType = application/json
+
+
+### ============================================
+### E2E-F11-01 运行记录加入对话（部分通过+未通过用例）
+### 功能点：验证未通过的测试用例数据可传递给 AI
+### 前置条件：学生代码部分通过
+### 预期结果：AI 回复中分析了具体哪些用例未通过及原因
+### ============================================
+
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "",
+  "problem_id": {{testProblemId}},
+  "question_type": "algorithm_problem",
+  "problem_info": {
+    "id": {{testProblemId}},
+    "title": "两数之和",
+    "difficulty": "easy",
+    "description": "给定一个整数数组 nums 和一个整数目标值 target，请你在该数组中找出和为目标值 target 的那两个整数，并返回它们的数组下标。"
+  },
+  "user_code": "#include <iostream>\nusing namespace std;\nint main() {\n    int n, target;\n    cin >> n >> target;\n    int arr[100];\n    for (int i = 0; i < n; i++) cin >> arr[i];\n    // 只检查相邻元素\n    for (int i = 0; i < n - 1; i++) {\n        if (arr[i] + arr[i+1] == target) {\n            cout << i << \" \" << i+1 << endl;\n            return 0;\n        }\n    }\n    cout << \"-1 -1\" << endl;\n    return 0;\n}",
+  "user_code_lang": "cpp",
+  "judge_result": "partial_pass",
+  "failed_cases": "[{\"case_id\":2,\"input\":\"4 9\\n2 7 11 15\",\"expected_output\":\"0 1\",\"actual_output\":\"-1 -1\"},{\"case_id\":3,\"input\":\"2 6\\n3 3\",\"expected_output\":\"0 1\",\"actual_output\":\"0 1\"}]",
+  "messages": [
+    {
+      "role": "user",
+      "content": "我的代码只通过了部分测试用例，能帮我分析一下哪里有问题吗？"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F11-01: 未通过测试用例感知", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    // AI 应分析未通过的测试用例
+  });
+%}
+
+
+### ============================================
+### E2E-F11-02 运行记录加入对话（全部通过→代码优化）
+### 功能点：验证全部通过时 AI 自动给出优化建议
+### 前置条件：学生代码全部通过
+### 预期结果：AI 回复给出代码优化建议
+### ============================================
+
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "",
+  "problem_id": {{testProblemId}},
+  "question_type": "algorithm_problem",
+  "problem_info": {
+    "id": {{testProblemId}},
+    "title": "两数之和",
+    "difficulty": "easy",
+    "description": "给定一个整数数组 nums 和一个整数目标值 target"
+  },
+  "user_code": "#include <iostream>\nusing namespace std;\nint main() {\n    int n, target;\n    cin >> n >> target;\n    int arr[100];\n    for (int i = 0; i < n; i++) cin >> arr[i];\n    // O(n^2) 暴力解法\n    for (int i = 0; i < n; i++) {\n        for (int j = i + 1; j < n; j++) {\n            if (arr[i] + arr[j] == target) {\n                cout << i << \" \" << j << endl;\n                return 0;\n            }\n        }\n    }\n    return 0;\n}",
+  "user_code_lang": "cpp",
+  "judge_result": "accepted",
+  "messages": [
+    {
+      "role": "user",
+      "content": "我的代码全部通过了，但是时间复杂度是O(n^2)，有没有更优的解法？"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F11-02: 全部通过后代码优化建议", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    // AI 应给出优化建议（如哈希表O(n)解法）
+  });
+%}

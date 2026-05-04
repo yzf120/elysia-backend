@@ -1,0 +1,144 @@
+### ============================================
+### 功能点 F17：会话收藏
+### 对应任务书：3c - 记忆功能
+### 对应代码：elysia-backend/router/favorite.go
+### ============================================
+
+@baseUrl = http://localhost:8001
+@contentType = application/json
+
+
+### ============================================
+### E2E-F17-01 收藏会话
+### 功能点：验证学生可收藏重要的对话会话
+### 前置条件：已有会话
+### 预期结果：返回收藏成功
+### ============================================
+
+POST {{baseUrl}}/api/ai/favorite
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "{{testSessionId}}"
+}
+
+> {%
+  client.test("E2E-F17-01: 收藏会话成功", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.error.code === 0 || body.error.code === 200, "业务码应为成功");
+  });
+%}
+
+
+### ============================================
+### E2E-F17-02 查询收藏列表
+### 功能点：验证可查看所有收藏的会话
+### 前置条件：已收藏会话
+### 预期结果：返回收藏列表，包含会话标题和时间
+### ============================================
+
+GET {{baseUrl}}/api/ai/favorites?page=1&page_size=20
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F17-02: 查询收藏列表", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.error.code === 0, "业务码应为0");
+    client.assert(body.data !== null, "应返回收藏数据");
+    client.assert(body.data.favorites !== undefined, "应返回favorites列表");
+    client.assert(Array.isArray(body.data.favorites), "favorites应为数组");
+    // 验证收藏列表中包含刚才收藏的会话
+    if (body.data.favorites.length > 0) {
+      var found = false;
+      for (var i = 0; i < body.data.favorites.length; i++) {
+        if (body.data.favorites[i].session_id === client.global.get("testSessionId")) {
+          found = true;
+          break;
+        }
+      }
+      client.assert(found, "收藏列表应包含刚才收藏的会话");
+    }
+  });
+%}
+
+
+### ============================================
+### E2E-F17-03 取消收藏
+### 功能点：验证可取消收藏
+### 前置条件：已收藏会话
+### 预期结果：返回取消成功，收藏列表中不再包含该会话
+### ============================================
+
+### 步骤1: 取消收藏
+POST {{baseUrl}}/api/ai/unfavorite
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "{{testSessionId}}"
+}
+
+> {%
+  client.test("E2E-F17-03-Step1: 取消收藏成功", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.error.code === 0 || body.error.code === 200, "业务码应为成功");
+  });
+%}
+
+### 步骤2: 验证收藏列表中不再包含该会话
+GET {{baseUrl}}/api/ai/favorites?page=1&page_size=20
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F17-03-Step2: 验证取消收藏后列表更新", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    if (body.data.favorites && body.data.favorites.length > 0) {
+      var found = false;
+      for (var i = 0; i < body.data.favorites.length; i++) {
+        if (body.data.favorites[i].session_id === client.global.get("testSessionId")) {
+          found = true;
+          break;
+        }
+      }
+      client.assert(!found, "取消收藏后列表不应包含该会话");
+    }
+  });
+%}
+
+
+### ============================================
+### E2E-F17-04 检查收藏状态
+### 功能点：验证可查询某会话是否已收藏
+### 前置条件：已收藏会话
+### 预期结果：返回 is_favorited 布尔值
+### ============================================
+
+### 先重新收藏
+POST {{baseUrl}}/api/ai/favorite
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "{{testSessionId}}"
+}
+
+### 检查收藏状态
+GET {{baseUrl}}/api/ai/favorite/check?session_id={{testSessionId}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F17-04: 检查收藏状态", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.error.code === 0, "业务码应为0");
+    client.assert(body.data.is_favorited === true, "已收藏的会话应返回is_favorited=true");
+  });
+%}

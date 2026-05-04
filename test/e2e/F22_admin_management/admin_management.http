@@ -1,0 +1,270 @@
+### ============================================
+### 功能点 F22：管理员后台管理
+### 对应任务书：系统管理
+### 对应代码：elysia-backend/router/admin.go, intent.go, ai_model_config.go
+### ============================================
+
+@baseUrl = http://localhost:8001
+@contentType = application/json
+
+
+### ============================================
+### E2E-F22-01 管理员审核教师
+### 功能点：验证管理员可审核教师注册申请
+### 前置条件：有待审核的教师
+### 预期结果：教师状态更新为"已通过"或"已拒绝"
+### ============================================
+
+### 步骤1: 查询待审核教师列表
+GET {{baseUrl}}/api/admin/teacher/pending?page=1&page_size=20
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+> {%
+  client.test("E2E-F22-01-Step1: 查询待审核教师列表", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    var data = body.data || body;
+    // 保存待审核教师ID
+    if (data.teachers && data.teachers.length > 0) {
+      client.global.set("pendingTeacherId", data.teachers[0].teacher_id || data.teachers[0].id);
+    }
+  });
+%}
+
+### 步骤2: 审核通过教师
+POST {{baseUrl}}/api/admin/teacher/approve
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "teacher_id": "{{pendingTeacherId}}",
+  "status": "approved",
+  "remark": "审核通过"
+}
+
+> {%
+  client.test("E2E-F22-01-Step2: 审核通过教师", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.code === 200 || body.code === 0, "业务码应为成功");
+  });
+%}
+
+
+### ============================================
+### E2E-F22-02 意图字典管理
+### 功能点：验证管理员可管理意图分类字典
+### 前置条件：管理员已登录
+### 预期结果：意图字典增删改查正常
+### ============================================
+
+### 查询意图字典列表
+GET {{baseUrl}}/api/admin/intent/list?page=1&page_size=20
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+> {%
+  client.test("E2E-F22-02-A: 查询意图字典列表", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.error.code === 0, "业务码应为0");
+    client.assert(body.data !== null, "应返回意图数据");
+    // 保存一个意图ID供后续测试
+    if (body.data.intents && body.data.intents.length > 0) {
+      client.global.set("testIntentId", body.data.intents[0].id);
+      client.global.set("testIntentCode", body.data.intents[0].intent_code);
+    }
+  });
+%}
+
+### 创建新意图
+POST {{baseUrl}}/api/admin/intent/create
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "intent_code": "TEST_INTENT",
+  "intent_name": "测试意图",
+  "description": "这是一个用于测试的意图分类",
+  "keywords": ["测试", "test"],
+  "is_active": true
+}
+
+> {%
+  client.test("E2E-F22-02-B: 创建新意图", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.error.code === 0, "业务码应为0");
+    if (body.data && body.data.id) {
+      client.global.set("newIntentId", body.data.id);
+    }
+  });
+%}
+
+### 更新意图
+POST {{baseUrl}}/api/admin/intent/update
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "id": "{{newIntentId}}",
+  "intent_code": "TEST_INTENT",
+  "intent_name": "测试意图（已更新）",
+  "description": "这是一个已更新的测试意图分类",
+  "keywords": ["测试", "test", "更新"],
+  "is_active": true
+}
+
+> {%
+  client.test("E2E-F22-02-C: 更新意图", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.error.code === 0, "业务码应为0");
+  });
+%}
+
+### 删除意图
+POST {{baseUrl}}/api/admin/intent/delete
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "id": "{{newIntentId}}"
+}
+
+> {%
+  client.test("E2E-F22-02-D: 删除意图", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.error.code === 0, "业务码应为0");
+  });
+%}
+
+
+### ============================================
+### E2E-F22-03 意图提示词模板管理
+### 功能点：验证管理员可管理各意图的提示词模板
+### 前置条件：管理员已登录
+### 预期结果：修改某意图的系统提示词模板后生效
+### ============================================
+
+### 查询意图提示词模板
+GET {{baseUrl}}/api/admin/intent/prompt?intent_code={{testIntentCode}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+> {%
+  client.test("E2E-F22-03-A: 查询意图提示词模板", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.error.code === 0, "业务码应为0");
+    // 保存原始提示词用于恢复
+    if (body.data && body.data.system_prompt) {
+      client.global.set("originalPrompt", body.data.system_prompt);
+    }
+  });
+%}
+
+### 更新意图提示词模板
+POST {{baseUrl}}/api/admin/intent/prompt/update
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "intent_code": "{{testIntentCode}}",
+  "system_prompt": "你是一个专业的编程助教，请用启发式方法回答学生的问题。【测试更新】"
+}
+
+> {%
+  client.test("E2E-F22-03-B: 更新意图提示词模板", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.error.code === 0, "业务码应为0");
+  });
+%}
+
+
+### ============================================
+### E2E-F22-04 AI 模型配置管理
+### 功能点：验证管理员可启用/禁用 AI 模型
+### 前置条件：管理员已登录
+### 预期结果：禁用某个模型后，学生查询模型列表时不再包含该模型
+### ============================================
+
+### 步骤1: 查询当前模型配置列表
+GET {{baseUrl}}/api/admin/ai-model/list
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+> {%
+  client.test("E2E-F22-04-Step1: 查询模型配置列表", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.error.code === 0, "业务码应为0");
+    // 保存一个模型ID用于测试禁用
+    if (body.data && body.data.models && body.data.models.length > 1) {
+      var lastModel = body.data.models[body.data.models.length - 1];
+      client.global.set("testModelConfigId", lastModel.id);
+      client.global.set("testModelId", lastModel.model_id);
+    }
+  });
+%}
+
+### 步骤2: 禁用某个模型
+POST {{baseUrl}}/api/admin/ai-model/update
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "id": "{{testModelConfigId}}",
+  "is_active": false
+}
+
+> {%
+  client.test("E2E-F22-04-Step2: 禁用模型", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.error.code === 0, "业务码应为0");
+  });
+%}
+
+### 步骤3: 学生查询模型列表，验证被禁用的模型不在列表中
+GET {{baseUrl}}/api/student/ai/models
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F22-04-Step3: 验证禁用模型不在学生列表中", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    if (body.data && body.data.models) {
+      var disabledModelId = client.global.get("testModelId");
+      var found = false;
+      for (var i = 0; i < body.data.models.length; i++) {
+        var model = body.data.models[i];
+        if ((model.ModelID || model.model_id) === disabledModelId) {
+          found = true;
+          break;
+        }
+      }
+      client.assert(!found, "被禁用的模型不应出现在学生可用列表中");
+    }
+  });
+%}
+
+### 步骤4: 恢复模型启用状态（清理测试数据）
+POST {{baseUrl}}/api/admin/ai-model/update
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "id": "{{testModelConfigId}}",
+  "is_active": true
+}
+
+> {%
+  client.test("E2E-F22-04-Step4: 恢复模型启用状态", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+  });
+%}

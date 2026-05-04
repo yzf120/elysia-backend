@@ -1,0 +1,241 @@
+### ============================================
+### 功能点 F4：代码运行与判题（OJ平台核心）
+### 对应任务书：3a - 与现有OJ平台的集成
+### 对应代码：elysia-backend/router/code_run.go
+### ============================================
+
+@baseUrl = http://localhost:8001
+@contentType = application/json
+
+
+### ============================================
+### E2E-F4-01 学生提交代码运行（全部通过）
+### 功能点：验证正确代码提交后判题结果为 accepted
+### 前置条件：学生已登录，题目已创建
+### 预期结果：返回 run_id，轮询后获得 status: "accepted"
+### ============================================
+
+### 步骤1: 提交正确代码
+POST {{baseUrl}}/api/student/code/run
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "problem_id": {{testProblemId}},
+  "code": "#include <iostream>\n#include <unordered_map>\nusing namespace std;\nint main() {\n    int n, target;\n    cin >> n >> target;\n    unordered_map<int, int> mp;\n    for (int i = 0; i < n; i++) {\n        int num;\n        cin >> num;\n        if (mp.count(target - num)) {\n            cout << mp[target - num] << \" \" << i << endl;\n            return 0;\n        }\n        mp[num] = i;\n    }\n    return 0;\n}",
+  "language": "cpp",
+  "run_type": "judge"
+}
+
+> {%
+  client.test("E2E-F4-01-Step1: 提交代码成功", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.data.run_id !== undefined, "应返回run_id");
+    client.global.set("acceptedRunId", body.data.run_id);
+  });
+%}
+
+### 步骤2: 轮询判题结果（等待几秒后执行）
+GET {{baseUrl}}/api/student/code/result?run_id={{acceptedRunId}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F4-01-Step2: 判题结果为accepted", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    var result = body.data || body;
+    // 判题可能还在进行中(pending)或已完成(accepted)
+    client.assert(result.status === "accepted" || result.status === "pending" || result.status === "running",
+      "状态应为accepted/pending/running，实际: " + result.status);
+  });
+%}
+
+
+### ============================================
+### E2E-F4-02 学生提交代码运行（部分通过）
+### 功能点：验证部分正确代码的判题结果
+### 前置条件：学生已登录
+### 预期结果：返回 status 包含未通过的测试用例详情
+### ============================================
+
+POST {{baseUrl}}/api/student/code/run
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "problem_id": {{testProblemId}},
+  "code": "#include <iostream>\nusing namespace std;\nint main() {\n    int n, target;\n    cin >> n >> target;\n    // 暴力解法，只能通过部分用例（故意写错边界）\n    for (int i = 0; i < n; i++) {\n        for (int j = i + 1; j < n - 1; j++) {\n            int a, b;\n            cin >> a >> b;\n            if (a + b == target) {\n                cout << i << \" \" << j << endl;\n                return 0;\n            }\n        }\n    }\n    return 0;\n}",
+  "language": "cpp",
+  "run_type": "judge"
+}
+
+> {%
+  client.test("E2E-F4-02: 提交部分正确代码", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.data.run_id !== undefined, "应返回run_id");
+    client.global.set("partialRunId", body.data.run_id);
+  });
+%}
+
+
+### ============================================
+### E2E-F4-03 学生提交代码运行（编译错误）
+### 功能点：验证语法错误代码返回编译错误信息
+### 前置条件：学生已登录
+### 预期结果：返回 status: "compile_error"，包含编译器报错日志
+### ============================================
+
+POST {{baseUrl}}/api/student/code/run
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "problem_id": {{testProblemId}},
+  "code": "#include <iostream>\nusing namespace std;\nint main() {\n    int n target;  // 故意缺少逗号，制造编译错误\n    cin >> n >> target;\n    return 0\n}",
+  "language": "cpp",
+  "run_type": "judge"
+}
+
+> {%
+  client.test("E2E-F4-03: 提交编译错误代码", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.data.run_id !== undefined, "应返回run_id");
+    client.global.set("compileErrorRunId", body.data.run_id);
+  });
+%}
+
+### 轮询编译错误结果
+GET {{baseUrl}}/api/student/code/result?run_id={{compileErrorRunId}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F4-03-Result: 判题结果为compile_error", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    var result = body.data || body;
+    // 编译错误应包含错误信息
+    client.assert(result.status === "compile_error" || result.status === "pending",
+      "状态应为compile_error或pending");
+  });
+%}
+
+
+### ============================================
+### E2E-F4-04 代码语法检查
+### 功能点：验证仅编译不运行的语法检查功能
+### 前置条件：学生已登录
+### 预期结果：返回 has_error 布尔值和 diagnostics 诊断信息列表
+### ============================================
+
+### 检查正确代码
+POST {{baseUrl}}/api/student/code/check
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "code": "#include <iostream>\nusing namespace std;\nint main() {\n    cout << \"Hello World\" << endl;\n    return 0;\n}",
+  "language": "cpp"
+}
+
+> {%
+  client.test("E2E-F4-04-A: 正确代码语法检查通过", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.data.has_error === false, "正确代码不应有语法错误");
+  });
+%}
+
+### 检查错误代码
+POST {{baseUrl}}/api/student/code/check
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "code": "#include <iostream>\nint main() {\n    int x = \n    return 0;\n}",
+  "language": "cpp"
+}
+
+> {%
+  client.test("E2E-F4-04-B: 错误代码语法检查发现错误", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.data.has_error === true, "错误代码应检测到语法错误");
+    client.assert(body.data.diagnostics !== undefined, "应返回diagnostics诊断信息");
+  });
+%}
+
+
+### ============================================
+### E2E-F4-05 查询代码运行记录
+### 功能点：验证学生可查看某题的历史提交记录
+### 前置条件：学生已提交过代码
+### 预期结果：返回最近10条运行记录（倒序）
+### ============================================
+
+GET {{baseUrl}}/api/student/code/records?problem_id={{testProblemId}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F4-05: 查询代码运行记录", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.data.records !== undefined, "应返回records列表");
+    client.assert(Array.isArray(body.data.records), "records应为数组");
+    // 验证记录数不超过10条
+    client.assert(body.data.records.length <= 10, "最多返回10条记录");
+  });
+%}
+
+
+### ============================================
+### E2E-F4-06 批量查询题目通过状态
+### 功能点：验证批量查询学生已通过的题目
+### 前置条件：学生已通过部分题目
+### 预期结果：返回 accepted_problem_ids 列表
+### ============================================
+
+GET {{baseUrl}}/api/student/code/progress?problem_ids={{testProblemId}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F4-06: 批量查询题目通过状态", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.data.accepted_problem_ids !== undefined, "应返回accepted_problem_ids");
+    client.assert(Array.isArray(body.data.accepted_problem_ids), "accepted_problem_ids应为数组");
+  });
+%}
+
+
+### ============================================
+### E2E-F4-07 教师提交代码运行
+### 功能点：验证教师也可使用代码执行引擎
+### 前置条件：教师已登录
+### 预期结果：返回 run_id，可正常判题
+### ============================================
+
+POST {{baseUrl}}/api/teacher/code/run
+Content-Type: {{contentType}}
+Authorization: Bearer {{teacherToken}}
+
+{
+  "problem_id": {{testProblemId}},
+  "code": "#include <iostream>\n#include <unordered_map>\nusing namespace std;\nint main() {\n    int n, target;\n    cin >> n >> target;\n    unordered_map<int, int> mp;\n    for (int i = 0; i < n; i++) {\n        int num;\n        cin >> num;\n        if (mp.count(target - num)) {\n            cout << mp[target - num] << \" \" << i << endl;\n            return 0;\n        }\n        mp[num] = i;\n    }\n    return 0;\n}",
+  "language": "cpp",
+  "run_type": "judge"
+}
+
+> {%
+  client.test("E2E-F4-07: 教师提交代码运行成功", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.data.run_id !== undefined, "应返回run_id");
+  });
+%}

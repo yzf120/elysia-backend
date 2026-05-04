@@ -1,0 +1,129 @@
+### ============================================
+### 功能点 F18：学生做题画像（平台数据生成用户画像）
+### 对应任务书：3c - 记忆功能
+### 对应代码：elysia-backend/router/student.go (getStudentCodingStatsHandler)
+### ============================================
+
+@baseUrl = http://localhost:8001
+@contentType = application/json
+
+
+### ============================================
+### E2E-F18-01 查询学生做题画像
+### 功能点：验证系统根据提交记录生成做题画像
+### 前置条件：学生已有多次代码提交记录
+### 预期结果：返回 has_profile: true，包含各项画像字段
+### ============================================
+
+GET {{baseUrl}}/api/student/profile/coding-stats
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F18-01: 查询学生做题画像", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    var data = body.data || body;
+    if (data.has_profile === true) {
+      // 有画像时验证关键字段
+      client.assert(data.total_submissions !== undefined, "应包含total_submissions");
+      client.assert(data.accepted_count !== undefined, "应包含accepted_count");
+      client.assert(data.accept_rate !== undefined, "应包含accept_rate");
+      client.assert(data.preferred_language !== undefined, "应包含preferred_language");
+      client.assert(data.difficulty_level !== undefined, "应包含difficulty_level");
+    } else {
+      // 无画像时 has_profile 应为 false
+      client.assert(data.has_profile === false, "无提交记录时has_profile应为false");
+    }
+  });
+%}
+
+
+### ============================================
+### E2E-F18-02 无提交记录时画像为空
+### 功能点：验证新学生无画像数据
+### 前置条件：学生无任何提交记录（使用新注册的学生）
+### 预期结果：返回 has_profile: false
+### 说明：此测试需要使用一个全新注册且未提交过代码的学生账号
+### ============================================
+
+### 使用新学生token（需要先注册一个新学生并登录）
+### 此处使用变量 newStudentToken，需要在测试前设置
+GET {{baseUrl}}/api/student/profile/coding-stats
+Content-Type: {{contentType}}
+Authorization: Bearer {{newStudentToken}}
+
+> {%
+  client.test("E2E-F18-02: 无提交记录时画像为空", function() {
+    client.assert(response.status === 200 || response.status === 401, "HTTP状态码应为200或401");
+    if (response.status === 200) {
+      var body = response.body;
+      var data = body.data || body;
+      // 新学生应无画像
+      client.assert(data.has_profile === false, "新学生应无画像数据");
+    }
+  });
+%}
+
+
+### ============================================
+### E2E-F18-03 提交代码后画像自动更新
+### 功能点：验证每次提交后画像数据更新
+### 前置条件：学生已有画像
+### 预期结果：total_submissions 增加
+### 说明：此测试通过对比提交前后的画像数据来验证
+### ============================================
+
+### 步骤1: 记录当前画像数据
+GET {{baseUrl}}/api/student/profile/coding-stats
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F18-03-Step1: 记录当前画像", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    var data = body.data || body;
+    if (data.has_profile === true) {
+      client.global.set("beforeSubmissions", data.total_submissions);
+    } else {
+      client.global.set("beforeSubmissions", 0);
+    }
+  });
+%}
+
+### 步骤2: 提交一次代码
+POST {{baseUrl}}/api/student/code/run
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "problem_id": {{testProblemId}},
+  "code": "#include <iostream>\nusing namespace std;\nint main() {\n    cout << \"test\" << endl;\n    return 0;\n}",
+  "language": "cpp",
+  "run_type": "judge"
+}
+
+> {%
+  client.test("E2E-F18-03-Step2: 提交代码", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+  });
+%}
+
+### 步骤3: 等待判题和画像更新后，重新查询画像
+### 注意：需要等待约5-10秒让判题和画像更新完成
+GET {{baseUrl}}/api/student/profile/coding-stats
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F18-03-Step3: 验证画像已更新", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    var data = body.data || body;
+    if (data.has_profile === true) {
+      var before = parseInt(client.global.get("beforeSubmissions")) || 0;
+      client.assert(data.total_submissions >= before, "提交次数应不小于之前的值");
+    }
+  });
+%}

@@ -1,0 +1,200 @@
+### ============================================
+### 功能点 F12：意图识别与路由
+### 对应任务书：3b - 智能助教设计与实现
+### 对应代码：elysia-chat-agent/agent/intent_router.go, model/intent.go
+### ============================================
+
+@baseUrl = http://localhost:8001
+@contentType = application/json
+
+
+### ============================================
+### E2E-F12-01 概念解析意图识别
+### 功能点：验证"什么是动态规划"类问题被识别为 KNOWLEDGE_ALGO
+### 前置条件：学生已登录
+### 预期结果：AI 回复为概念解释类内容
+### ============================================
+
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "",
+  "messages": [
+    {
+      "role": "user",
+      "content": "什么是动态规划？它的核心思想是什么？"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F12-01: 概念解析意图识别（KNOWLEDGE_ALGO）", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    // AI 应返回概念解释类内容，而非代码分析
+  });
+%}
+
+
+### ============================================
+### E2E-F12-02 代码片段分析意图识别
+### 功能点：验证"帮我看看代码"类问题被识别为 SOLVE_BUG
+### 前置条件：学生已登录
+### 预期结果：AI 回复针对代码进行分析
+### ============================================
+
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "",
+  "problem_id": {{testProblemId}},
+  "question_type": "algorithm_problem",
+  "user_code": "#include <iostream>\nusing namespace std;\nint main() {\n    int arr[5] = {1,2,3,4,5};\n    for (int i = 0; i <= 5; i++) {\n        cout << arr[i] << endl;\n    }\n    return 0;\n}",
+  "user_code_lang": "cpp",
+  "messages": [
+    {
+      "role": "user",
+      "content": "我的代码哪里错了？运行结果不对"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F12-02: 代码片段分析意图识别（SOLVE_BUG）", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    // AI 应针对代码中的数组越界问题进行分析
+  });
+%}
+
+
+### ============================================
+### E2E-F12-03 错误解析意图识别
+### 功能点：验证编译报错类问题被识别为 CODE_DEBUG
+### 前置条件：学生已登录
+### 预期结果：AI 回复解释错误原因
+### ============================================
+
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "",
+  "messages": [
+    {
+      "role": "user",
+      "content": "编译报错 undefined reference to 'main'，这是什么意思？怎么解决？"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F12-03: 错误解析意图识别（CODE_DEBUG）", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    // AI 应解释编译错误原因
+  });
+%}
+
+
+### ============================================
+### E2E-F12-04 代码优化意图识别
+### 功能点：验证"代码太慢"类问题被识别为 SOLVE_OPTIMIZE
+### 前置条件：学生已登录
+### 预期结果：AI 回复给出优化建议
+### ============================================
+
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "",
+  "problem_id": {{testProblemId}},
+  "question_type": "algorithm_problem",
+  "user_code": "#include <iostream>\nusing namespace std;\nint main() {\n    int n, target;\n    cin >> n >> target;\n    int arr[100000];\n    for (int i = 0; i < n; i++) cin >> arr[i];\n    for (int i = 0; i < n; i++)\n        for (int j = i+1; j < n; j++)\n            if (arr[i]+arr[j]==target) {\n                cout << i << \" \" << j;\n                return 0;\n            }\n    return 0;\n}",
+  "user_code_lang": "cpp",
+  "messages": [
+    {
+      "role": "user",
+      "content": "我的代码超时了，怎么优化才能通过？时间复杂度太高了"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F12-04: 代码优化意图识别（SOLVE_OPTIMIZE）", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    // AI 应给出优化建议
+  });
+%}
+
+
+### ============================================
+### E2E-F12-05 解题思路意图识别
+### 功能点：验证"怎么做"类问题被识别为 SOLVE_THINK
+### 前置条件：学生已登录
+### 预期结果：AI 回复给出思路提示（非完整答案）
+### ============================================
+
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "",
+  "problem_id": {{testProblemId}},
+  "question_type": "algorithm_problem",
+  "problem_info": {
+    "id": {{testProblemId}},
+    "title": "两数之和",
+    "difficulty": "easy",
+    "description": "给定一个整数数组 nums 和一个整数目标值 target，请你在该数组中找出和为目标值 target 的那两个整数，并返回它们的数组下标。"
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "这道题的解题思路是什么？我完全没有头绪"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F12-05: 解题思路意图识别（SOLVE_THINK）", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    // AI 应给出思路提示而非完整代码
+  });
+%}
+
+
+### ============================================
+### E2E-F12-06 关键词降级分类
+### 功能点：验证 LLM 不可用时关键词降级机制生效
+### 前置条件：发送包含明确关键词的消息
+### 预期结果：系统通过关键词匹配降级分类，对话仍正常进行
+### 说明：此测试验证关键词降级路径，即使LLM意图分类可用，
+###       关键词匹配也会作为辅助参考
+### ============================================
+
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "",
+  "messages": [
+    {
+      "role": "user",
+      "content": "我的代码有bug，运行结果和预期不一样，帮我debug一下"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F12-06: 关键词降级分类", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    // 包含 "bug" 和 "debug" 关键词，应被识别为 SOLVE_BUG 或 CODE_DEBUG
+  });
+%}

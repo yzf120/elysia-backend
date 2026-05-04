@@ -207,7 +207,7 @@ func studentAIChatHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if userMsg != "" {
-		moderateCtx, moderateCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		moderateCtx, moderateCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer moderateCancel()
 
 		// 文本审核
@@ -275,6 +275,20 @@ func studentAIChatHandler(w http.ResponseWriter, r *http.Request) {
 
 	// 构建系统提示词
 	systemPrompt := buildSystemPrompt(request.QuestionType, request.ProblemInfo, request.UserCode, request.UserCodeLang, request.JudgeResult, request.FailedCases)
+
+	// 调试日志：打印系统提示词构建的关键参数
+	hasProblemInfo := request.ProblemInfo != nil
+	problemTitle := ""
+	if hasProblemInfo {
+		problemTitle = request.ProblemInfo.Title
+	}
+	log.Printf("[conversation][DEBUG] 系统提示词构建参数: questionType=%s, hasProblemInfo=%v, problemTitle=%s, userCodeLen=%d, judgeResult=%s, failedCasesLen=%d, systemPromptLen=%d",
+		request.QuestionType, hasProblemInfo, problemTitle, len(request.UserCode), request.JudgeResult, len(request.FailedCases), len(systemPrompt))
+	if len(systemPrompt) > 500 {
+		log.Printf("[conversation][DEBUG] 系统提示词前500字符: %s", systemPrompt[:500])
+	} else {
+		log.Printf("[conversation][DEBUG] 系统提示词全文: %s", systemPrompt)
+	}
 
 	// 构建发送给 chat-agent 的消息列表
 	agentMessages := make([]agentpb.AgentChatMessage, 0, len(request.Messages))
@@ -737,10 +751,12 @@ func base64Decode(s string) ([]byte, error) {
 
 // buildSystemPrompt 根据问题类型和题目信息构建系统提示词
 func buildSystemPrompt(questionType string, problemInfo *ProblemContext, userCode string, userCodeLang string, judgeResult string, failedCases string) string {
-	basePrompt := "你是一位专业的编程助教，擅长帮助学生理解算法和编程问题。请用清晰、易懂的方式回答学生的问题，可以给出思路提示，但不要直接给出完整答案，鼓励学生自己思考。回复格式要求：禁止使用任何标题格式（不要用 #、##、### 等标题标记），禁止使用 LaTeX 数学公式（不要用 \\[...\\]、\\(...\\)、$...$ 等语法，数学表达式请用纯文本描述如 f(n) = f(n-1) + f(n-2)），用自然段落组织内容，可以用加粗强调关键词、用列表梳理步骤、用代码块展示代码。"
+	basePrompt := "你是一位专业的编程助教，擅长帮助学生理解算法和编程问题。请用清晰、易懂的方式回答学生的问题，可以给出思路提示，但不要直接给出完整答案，鼓励学生自己思考。回复格式要求：用自然段落组织内容，可以用加粗强调关键词、用列表梳理步骤、用代码块展示代码。"
 
 	if questionType == "algorithm_problem" && problemInfo != nil {
-		problemDesc := "\n\n【当前题目信息】\n"
+		// 明确告知 AI 它已经拥有完整的题目上下文
+		problemDesc := "\n\n【重要】你已经拥有学生当前正在做的题目的完整信息，不需要再向学生询问题目内容。请直接基于以下题目信息回答学生的问题。\n"
+		problemDesc += "\n【当前题目信息】\n"
 		problemDesc += "题目名称：" + problemInfo.Title + "\n"
 		if problemInfo.Difficulty != "" {
 			diffMap := map[string]string{"easy": "简单", "medium": "中等", "hard": "困难"}
@@ -789,10 +805,10 @@ func buildSystemPrompt(questionType string, problemInfo *ProblemContext, userCod
 				judgeLabel = "超时"
 			}
 			problemDesc += "\n\n【运行记录 - 判题结果：" + judgeLabel + "】\n"
-			problemDesc += "学生已将运行记录加入对话，请结合以下判题信息分析问题。\n"
+			problemDesc += "学生已将运行记录加入对话，请直接结合以下判题信息分析问题，不要再向学生索要运行结果。\n"
 			if failedCases != "" {
 				problemDesc += "未通过的测试用例详情：\n```json\n" + failedCases + "\n```\n"
-				problemDesc += "请根据以上未通过的测试用例，分析学生代码的问题所在，给出修改建议。\n"
+				problemDesc += "请根据以上未通过的测试用例，分析学生代码的问题所在，引导学生思考如何修复。\n"
 			}
 		}
 
@@ -802,7 +818,7 @@ func buildSystemPrompt(questionType string, problemInfo *ProblemContext, userCod
 			if langLabel == "" {
 				langLabel = "未知语言"
 			}
-			problemDesc += "\n\n【学生当前代码（" + langLabel + "）】\n```" + userCodeLang + "\n" + userCode + "\n```\n注意：学生已主动选择将以上代码作为参考上下文。请严格遵守以下规则：\n1. 只有当学生的问题明确涉及代码（如'我的代码哪里有问题'、'帮我看看代码'、'为什么我的代码报错'等）时，才结合代码给出针对性回答。\n2. 若学生问的是题目思路、算法原理、时间复杂度等与代码无关的问题，绝对不要主动提及、引用或分析学生的代码。\n3. 判断标准：学生的问题中是否出现'我的代码'、'这段代码'、'代码'等明确指向代码的词语。"
+			problemDesc += "\n\n【学生当前代码（" + langLabel + "）】\n你已经拥有学生的代码，不需要再向学生索要代码。\n```" + userCodeLang + "\n" + userCode + "\n```\n请严格遵守以下规则：\n1. 当学生的问题涉及代码分析（如'为什么没通过'、'哪里有问题'、'帮我看看'等），直接结合上面的代码给出针对性分析。\n2. 若学生问的是题目思路、算法原理等与代码无关的问题，不要主动提及学生的代码。\n3. 绝对不要说'请提供你的代码'或'请贴出你的代码'之类的话，因为你已经有了。"
 		}
 
 		return basePrompt + problemDesc

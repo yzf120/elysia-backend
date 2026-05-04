@@ -1,0 +1,168 @@
+### ============================================
+### 功能点 F5：班级与课程管理
+### 对应任务书：3a - 与现有OJ平台的集成
+### 对应代码：elysia-backend/router/class.go, chapter.go
+### ============================================
+
+@baseUrl = http://localhost:8001
+@contentType = application/json
+
+
+### ============================================
+### E2E-F5-01 教师创建班级
+### 功能点：验证教师可创建班级并关联课程
+### 前置条件：教师已登录
+### 预期结果：返回班级 ID 和邀请码
+### ============================================
+
+POST {{baseUrl}}/api/teacher/class/create
+Content-Type: {{contentType}}
+Authorization: Bearer {{teacherToken}}
+
+{
+  "class_name": "2024级算法设计班",
+  "subject": "算法设计与分析",
+  "semester": "2024-2025-1",
+  "teacher_id": "{{teacherId}}",
+  "description": "本班级用于算法设计与分析课程教学"
+}
+
+> {%
+  client.test("E2E-F5-01: 教师创建班级成功", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.code === 200 || body.code === 0, "业务码应为成功");
+    // 保存班级ID和邀请码
+    var data = body.data || body;
+    if (data.class_id) client.global.set("testClassId", data.class_id);
+    if (data.class_code) client.global.set("testClassCode", data.class_code);
+  });
+%}
+
+
+### ============================================
+### E2E-F5-02 学生加入班级
+### 功能点：验证学生通过邀请码加入班级
+### 前置条件：班级已创建
+### 预期结果：返回加入成功，学生出现在班级成员列表中
+### ============================================
+
+POST {{baseUrl}}/api/student/class/join
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "class_code": "{{testClassCode}}",
+  "student_id": "{{studentId}}"
+}
+
+> {%
+  client.test("E2E-F5-02: 学生加入班级成功", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.code === 200 || body.code === 0, "业务码应为成功");
+  });
+%}
+
+
+### ============================================
+### E2E-F5-03 教师创建章节与小节
+### 功能点：验证教师可在班级下创建章节和关联题目
+### 前置条件：班级已创建
+### 预期结果：章节和小节创建成功，小节关联了指定的 problem_id
+### ============================================
+
+### 步骤1: 创建章节
+POST {{baseUrl}}/api/teacher/chapter/create
+Content-Type: {{contentType}}
+Authorization: Bearer {{teacherToken}}
+
+{
+  "class_id": "{{testClassId}}",
+  "title": "第一章 基础算法",
+  "description": "本章介绍基础算法，包括排序、搜索等",
+  "sort_order": 1
+}
+
+> {%
+  client.test("E2E-F5-03-Step1: 创建章节成功", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    var data = body.data || body;
+    if (data.chapter_id) client.global.set("testChapterId", data.chapter_id);
+  });
+%}
+
+### 步骤2: 在章节下创建小节并关联题目
+POST {{baseUrl}}/api/teacher/section/create
+Content-Type: {{contentType}}
+Authorization: Bearer {{teacherToken}}
+
+{
+  "chapter_id": "{{testChapterId}}",
+  "title": "1.1 两数之和",
+  "section_type": 1,
+  "problem_id": "{{testProblemId}}",
+  "sort_order": 1
+}
+
+> {%
+  client.test("E2E-F5-03-Step2: 创建小节并关联题目成功", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.code === 200 || body.code === 0, "业务码应为成功");
+  });
+%}
+
+
+### ============================================
+### E2E-F5-04 学生查看班级章节列表
+### 功能点：验证学生可查看所加入班级的课程内容
+### 前置条件：学生已加入班级
+### 预期结果：返回完整的章节-小节树形结构
+### ============================================
+
+POST {{baseUrl}}/api/class/chapters
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "class_id": "{{testClassId}}"
+}
+
+> {%
+  client.test("E2E-F5-04: 学生查看班级章节列表", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.code === 200 || body.code === 0, "业务码应为成功");
+    var data = body.data || body;
+    // 验证返回了章节列表
+    client.assert(data.chapters !== undefined || data.list !== undefined, "应返回章节列表");
+  });
+%}
+
+
+### ============================================
+### E2E-F5-05 学生待办事项（未完成章节）
+### 功能点：验证系统能识别学生未完成的章节
+### 前置条件：学生已加入班级，部分题目未通过
+### 预期结果：返回最多3条未完成章节，包含完成进度
+### ============================================
+
+GET {{baseUrl}}/api/student/pending-chapters
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F5-05: 学生待办事项查询", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    var data = body.data || body;
+    client.assert(data.pending_chapters !== undefined, "应返回pending_chapters");
+    client.assert(data.has_courses !== undefined, "应返回has_courses标识");
+    // 最多返回3条
+    if (Array.isArray(data.pending_chapters)) {
+      client.assert(data.pending_chapters.length <= 3, "最多返回3条未完成章节");
+    }
+  });
+%}

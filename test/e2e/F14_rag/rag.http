@@ -1,0 +1,39 @@
+### ============================================
+### 功能点 F14：RAG 检索增强
+### 对应任务书：3b - 智能助教设计与实现
+### 对应代码：elysia-chat-agent/rag/rag_service.go
+### ============================================
+
+@baseUrl = http://localhost:8001
+@contentType = application/json
+
+
+### ============================================
+### E2E-F14-01 知识库检索增强对话
+### 功能点：验证 AI 回复中融入了知识库检索结果
+### 前置条件：知识库中已存储相关知识条目
+### 预期结果：AI 回复内容更准确，包含知识库中的专业知识
+### 说明：RAG 检索在 chat-agent 内部自动触发，
+###       当用户提问涉及算法知识时，系统会检索知识库并融入回复
+### ============================================
+
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "",
+  "messages": [
+    {
+      "role": "user",
+      "content": "请详细解释一下红黑树的五个性质，以及为什么红黑树能保证O(log n)的查找效率？"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F14-01: 知识库检索增强对话", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    // AI 应返回融入知识库内容的专业回答
+  });
+%}

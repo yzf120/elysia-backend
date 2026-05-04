@@ -1,0 +1,176 @@
+### ============================================
+### 功能点 F1：学生注册与登录
+### 对应任务书：3a - 与现有OJ平台的集成
+### 对应代码：elysia-backend/router/student.go
+### ============================================
+
+@baseUrl = http://localhost:8001
+@contentType = application/json
+
+
+### ============================================
+### E2E-F1-01 学生短信验证码注册
+### 功能点：验证学生通过手机号+验证码完成注册
+### 前置条件：手机号未注册
+### 预期结果：返回 "message":"注册成功" 及 user_info
+### ============================================
+
+### 步骤1: 发送注册验证码
+POST {{baseUrl}}/api/student/auth/send-code-register
+Content-Type: {{contentType}}
+
+{
+  "phone_number": "13800138000"
+}
+
+> {%
+  client.test("E2E-F1-01-Step1: 发送注册验证码成功", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.data.message === "验证码发送成功", "应返回验证码发送成功");
+  });
+%}
+
+### 步骤2: 使用验证码注册（需替换为实际验证码，测试环境可配置固定验证码）
+POST {{baseUrl}}/api/student/auth/register-sms
+Content-Type: {{contentType}}
+
+{
+  "phone_number": "13800138000",
+  "code": "123456",
+  "student_number": "8209999001",
+  "password": "Test@123456"
+}
+
+> {%
+  client.test("E2E-F1-01-Step2: 学生注册成功", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.data.message === "注册成功", "应返回注册成功");
+    client.assert(body.data.user_info !== null, "应返回user_info");
+    client.assert(body.data.user_info.student_number === "8209999001", "学号应匹配");
+  });
+%}
+
+
+### ============================================
+### E2E-F1-02 学生短信验证码登录
+### 功能点：验证学生通过手机号+验证码登录
+### 前置条件：学生已注册
+### 预期结果：返回 token 和 user_info，token 为有效 JWT
+### ============================================
+
+### 步骤1: 发送登录验证码
+POST {{baseUrl}}/api/student/auth/send-code-login
+Content-Type: {{contentType}}
+
+{
+  "phone_number": "13800138000"
+}
+
+> {%
+  client.test("E2E-F1-02-Step1: 发送登录验证码成功", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.data.message === "验证码发送成功", "应返回验证码发送成功");
+  });
+%}
+
+### 步骤2: 使用验证码登录
+POST {{baseUrl}}/api/student/auth/login-sms
+Content-Type: {{contentType}}
+
+{
+  "phone_number": "13800138000",
+  "code": "123456"
+}
+
+> {%
+  client.test("E2E-F1-02-Step2: 学生验证码登录成功", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.data.message === "登录成功", "应返回登录成功");
+    client.assert(body.data.token !== null && body.data.token !== "", "应返回有效token");
+    client.assert(body.data.user_info !== null, "应返回user_info");
+    // 保存token供后续测试使用
+    client.global.set("studentToken", body.data.token);
+    client.global.set("studentId", body.data.user_info.student_id);
+  });
+%}
+
+
+### ============================================
+### E2E-F1-03 学生密码登录
+### 功能点：验证学生通过学号+密码登录
+### 前置条件：学生已注册且设置了密码
+### 预期结果：返回 token 和 user_info
+### ============================================
+
+POST {{baseUrl}}/api/student/auth/login-password
+Content-Type: {{contentType}}
+
+{
+  "student_number": "8209999001",
+  "password": "Test@123456"
+}
+
+> {%
+  client.test("E2E-F1-03: 学生密码登录成功", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.data.message === "登录成功", "应返回登录成功");
+    client.assert(body.data.token !== null && body.data.token !== "", "应返回有效token");
+    client.assert(body.data.user_info !== null, "应返回user_info");
+    // 更新token
+    client.global.set("studentToken", body.data.token);
+  });
+%}
+
+
+### ============================================
+### E2E-F1-04 学生登出
+### 功能点：验证学生登出后 token 失效
+### 前置条件：学生已登录，持有有效 token
+### 预期结果：1. 登出返回"成功登出" 2. 再次访问返回401
+### ============================================
+
+### 步骤1: 登出
+POST {{baseUrl}}/api/student/auth/logout
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F1-04-Step1: 学生登出成功", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.message === "成功登出", "应返回成功登出");
+  });
+%}
+
+### 步骤2: 使用已失效的token访问受保护接口
+GET {{baseUrl}}/api/student/profile
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F1-04-Step2: 登出后token失效", function() {
+    client.assert(response.status === 401, "HTTP状态码应为401，token已失效");
+  });
+%}
+
+
+### ============================================
+### E2E-F1-05 未认证访问受保护接口
+### 功能点：验证身份认证中间件拦截未授权请求
+### 前置条件：无
+### 预期结果：返回 HTTP 401
+### ============================================
+
+GET {{baseUrl}}/api/student/profile
+Content-Type: {{contentType}}
+
+> {%
+  client.test("E2E-F1-05: 未认证访问受保护接口返回401", function() {
+    client.assert(response.status === 401, "HTTP状态码应为401");
+  });
+%}

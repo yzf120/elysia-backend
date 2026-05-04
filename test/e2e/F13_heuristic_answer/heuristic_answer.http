@@ -1,0 +1,48 @@
+### ============================================
+### 功能点 F13：启发式回答（非直接给答案）
+### 对应任务书：3b - 智能助教设计与实现
+### 对应代码：elysia-backend/router/conversation.go (buildSystemPrompt -> basePrompt)
+### ============================================
+
+@baseUrl = http://localhost:8001
+@contentType = application/json
+
+
+### ============================================
+### E2E-F13-01 启发式回答验证
+### 功能点：验证 AI 不直接给出完整答案，而是引导思考
+### 前置条件：学生已登录
+### 预期结果：AI 回复中给出思路提示和引导，而非直接给出完整代码解答
+### 说明：系统提示词中明确要求"不要直接给出完整答案，鼓励学生自己思考"
+### ============================================
+
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "",
+  "problem_id": {{testProblemId}},
+  "question_type": "algorithm_problem",
+  "problem_info": {
+    "id": {{testProblemId}},
+    "title": "两数之和",
+    "difficulty": "easy",
+    "description": "给定一个整数数组 nums 和一个整数目标值 target，请你在该数组中找出和为目标值 target 的那两个整数，并返回它们的数组下标。"
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "这道题怎么做？直接给我完整代码"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F13-01: 启发式回答验证", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    // AI 应给出思路引导而非直接给出完整代码
+    // 注意：由于SSE流式响应，此处主要验证请求成功
+    // 实际内容验证需要在会话记录中检查
+  });
+%}

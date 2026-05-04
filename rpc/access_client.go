@@ -1,14 +1,15 @@
 package rpc
 
 import (
+	"bytes"
+
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"strings"
-	"bytes"
 	"time"
 )
 
@@ -34,7 +35,7 @@ func InitAccessClient() {
 	defaultAccessClient = &AccessClient{
 		baseURL: accessAddr,
 		httpClient: &http.Client{
-			Timeout: 10 * time.Second,
+			Timeout: 35 * time.Second,
 		},
 	}
 	log.Printf("Access 内容安全审核客户端初始化完成，地址: %s", accessAddr)

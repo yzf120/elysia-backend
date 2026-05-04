@@ -1,0 +1,207 @@
+### ============================================
+### 功能点 F3：题目管理（OJ平台核心）
+### 对应任务书：3a - 与现有OJ平台的集成
+### 对应代码：elysia-backend/router/problem.go
+### ============================================
+
+@baseUrl = http://localhost:8001
+@contentType = application/json
+
+
+### ============================================
+### E2E-F3-01 教师创建题目
+### 功能点：验证教师可创建包含测试用例的算法题
+### 前置条件：教师已登录
+### 预期结果：返回创建成功，包含题目 ID
+### ============================================
+
+POST {{baseUrl}}/api/teacher/problem/create
+Content-Type: {{contentType}}
+Authorization: Bearer {{teacherToken}}
+
+{
+  "title": "两数之和",
+  "description": "给定一个整数数组 nums 和一个整数目标值 target，请你在该数组中找出和为目标值 target 的那两个整数，并返回它们的数组下标。",
+  "difficulty": "easy",
+  "input_format": "第一行输入n和target，第二行输入n个整数",
+  "output_format": "输出两个下标，空格分隔",
+  "time_limit": 1000,
+  "memory_limit": 256,
+  "tags": ["数组", "哈希表"],
+  "test_cases": [
+    {
+      "input": "4 9\n2 7 11 15",
+      "expected_output": "0 1"
+    },
+    {
+      "input": "3 6\n3 2 4",
+      "expected_output": "1 2"
+    },
+    {
+      "input": "2 6\n3 3",
+      "expected_output": "0 1"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F3-01: 教师创建题目成功", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.code === 200 || body.code === 0, "业务码应为成功");
+    // 保存题目ID供后续测试使用
+    if (body.data && body.data.problem_id) {
+      client.global.set("testProblemId", body.data.problem_id);
+    } else if (body.problem_id) {
+      client.global.set("testProblemId", body.problem_id);
+    }
+  });
+%}
+
+
+### ============================================
+### E2E-F3-02 教师更新题目
+### 功能点：验证教师可修改已有题目
+### 前置条件：题目已创建
+### 预期结果：返回更新成功
+### ============================================
+
+POST {{baseUrl}}/api/teacher/problem/update
+Content-Type: {{contentType}}
+Authorization: Bearer {{teacherToken}}
+
+{
+  "id": {{testProblemId}},
+  "title": "两数之和（更新版）",
+  "description": "给定一个整数数组 nums 和一个整数目标值 target，请你在该数组中找出和为目标值 target 的那两个整数，并返回它们的数组下标。你可以假设每种输入只会对应一个答案。",
+  "difficulty": "easy",
+  "input_format": "第一行输入n和target，第二行输入n个整数",
+  "output_format": "输出两个下标，空格分隔",
+  "time_limit": 2000,
+  "memory_limit": 512,
+  "tags": ["数组", "哈希表", "双指针"]
+}
+
+> {%
+  client.test("E2E-F3-02: 教师更新题目成功", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.code === 200 || body.code === 0, "业务码应为成功");
+  });
+%}
+
+
+### ============================================
+### E2E-F3-03 教师删除题目
+### 功能点：验证教师可删除题目
+### 前置条件：题目已创建
+### 预期结果：返回删除成功
+### ============================================
+
+### 先创建一个用于删除的题目
+POST {{baseUrl}}/api/teacher/problem/create
+Content-Type: {{contentType}}
+Authorization: Bearer {{teacherToken}}
+
+{
+  "title": "待删除题目",
+  "description": "这是一道用于测试删除功能的题目",
+  "difficulty": "easy",
+  "input_format": "无",
+  "output_format": "无",
+  "time_limit": 1000,
+  "memory_limit": 256,
+  "test_cases": [
+    {
+      "input": "1",
+      "expected_output": "1"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F3-03-Prepare: 创建待删除题目", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    if (response.body.data && response.body.data.problem_id) {
+      client.global.set("deleteProblemId", response.body.data.problem_id);
+    } else if (response.body.problem_id) {
+      client.global.set("deleteProblemId", response.body.problem_id);
+    }
+  });
+%}
+
+### 删除题目
+POST {{baseUrl}}/api/teacher/problem/delete
+Content-Type: {{contentType}}
+Authorization: Bearer {{teacherToken}}
+
+{
+  "id": {{deleteProblemId}}
+}
+
+> {%
+  client.test("E2E-F3-03: 教师删除题目成功", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.code === 200 || body.code === 0, "业务码应为成功");
+  });
+%}
+
+
+### ============================================
+### E2E-F3-04 学生查询题目详情
+### 功能点：验证学生可查看题目信息
+### 前置条件：学生已登录，题目已创建
+### 预期结果：返回题目完整信息
+### ============================================
+
+GET {{baseUrl}}/api/problem/get?id={{testProblemId}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F3-04: 学生查询题目详情成功", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.code === 200 || body.code === 0, "业务码应为成功");
+    // 验证返回的题目信息包含关键字段
+    var problem = body.data || body.problem || body;
+    client.assert(problem.title !== undefined, "应包含题目标题");
+    client.assert(problem.description !== undefined, "应包含题目描述");
+    client.assert(problem.difficulty !== undefined, "应包含难度");
+  });
+%}
+
+
+### ============================================
+### E2E-F3-05 题目列表搜索与筛选
+### 功能点：验证按关键词和难度筛选题目
+### 前置条件：题库中有多道题目
+### 预期结果：返回匹配的题目列表，支持分页
+### ============================================
+
+### 按关键词搜索
+GET {{baseUrl}}/api/problem/list?keyword=两数之和&page=1&page_size=10
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F3-05-A: 按关键词搜索题目", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.code === 200 || body.code === 0, "业务码应为成功");
+  });
+%}
+
+### 按难度筛选
+GET {{baseUrl}}/api/problem/list?difficulty=easy&page=1&page_size=10
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F3-05-B: 按难度筛选题目", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    client.assert(body.code === 200 || body.code === 0, "业务码应为成功");
+  });
+%}

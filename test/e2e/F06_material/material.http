@@ -1,0 +1,103 @@
+### ============================================
+### 功能点 F6：学习资料管理
+### 对应任务书：3a - 与现有OJ平台的集成
+### 对应代码：elysia-backend/router/material.go
+### ============================================
+
+@baseUrl = http://localhost:8001
+@contentType = application/json
+
+
+### ============================================
+### E2E-F6-01 教师上传学习资料
+### 功能点：验证教师可上传课程相关资料
+### 前置条件：教师已登录，小节已创建
+### 预期结果：返回上传成功，资料出现在资料列表中
+### ============================================
+
+### 注意：此请求使用 multipart/form-data 格式
+### 在实际测试中需要替换为真实的文件路径
+POST {{baseUrl}}/api/teacher/material/upload
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
+Authorization: Bearer {{teacherToken}}
+
+------WebKitFormBoundary
+Content-Disposition: form-data; name="teacher_id"
+
+{{teacherId}}
+------WebKitFormBoundary
+Content-Disposition: form-data; name="section_id"
+
+{{testSectionId}}
+------WebKitFormBoundary
+Content-Disposition: form-data; name="title"
+
+算法基础讲义
+------WebKitFormBoundary
+Content-Disposition: form-data; name="description"
+
+第一章基础算法的讲义PDF
+------WebKitFormBoundary
+Content-Disposition: form-data; name="material_type"
+
+document
+------WebKitFormBoundary
+Content-Disposition: form-data; name="file"; filename="test_material.txt"
+Content-Type: text/plain
+
+这是一个测试学习资料文件的内容。
+------WebKitFormBoundary--
+
+> {%
+  client.test("E2E-F6-01: 教师上传学习资料成功", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    var data = body.data || body;
+    client.assert(data.message === "上传成功", "应返回上传成功");
+    if (data.material && data.material.material_id) {
+      client.global.set("testMaterialId", data.material.material_id);
+    }
+  });
+%}
+
+
+### ============================================
+### E2E-F6-02 学生查看/下载学习资料
+### 功能点：验证学生可查看和下载资料
+### 前置条件：资料已上传
+### 预期结果：返回资料列表，下载链接有效
+### ============================================
+
+### 查询资料列表
+POST {{baseUrl}}/api/material/list
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "section_id": "{{testSectionId}}"
+}
+
+> {%
+  client.test("E2E-F6-02-A: 学生查看学习资料列表", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    var body = response.body;
+    var data = body.data || body;
+    client.assert(data.materials !== undefined, "应返回materials列表");
+    client.assert(Array.isArray(data.materials), "materials应为数组");
+  });
+%}
+
+### 下载资料文件
+GET {{baseUrl}}/api/material/file/{{testMaterialId}}/download
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.test("E2E-F6-02-B: 学生下载学习资料", function() {
+    client.assert(response.status === 200 || response.status === 404, "HTTP状态码应为200或404（资料不存在时）");
+    // 如果下载成功，Content-Type 应为 application/octet-stream
+    if (response.status === 200) {
+      var contentType = response.headers.valueOf("Content-Type");
+      client.assert(contentType === "application/octet-stream" || contentType !== "", "应返回文件流");
+    }
+  });
+%}

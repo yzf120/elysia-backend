@@ -1,0 +1,66 @@
+### ============================================
+### 功能点 F8：AI 图片交互
+### 对应任务书：3b - 智能助教设计与实现
+### 对应代码：elysia-backend/router/conversation.go (extractImageURLs)
+### ============================================
+
+@baseUrl = http://localhost:8001
+@contentType = application/json
+
+
+### ============================================
+### E2E-F8-01 发送包含图片URL的消息
+### 功能点：验证学生可发送包含图片的消息给 AI
+### 前置条件：学生已登录
+### 预期结果：图片经过审核后，AI 正常回复
+### ============================================
+
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "",
+  "messages": [
+    {
+      "role": "user",
+      "content": "请帮我看看这段代码的截图有什么问题\n[IMAGE:https://example.com/test-code-screenshot.png]"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F8-01: 发送包含图片URL的消息", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    // 图片审核通过后应正常返回SSE流或JSON响应
+  });
+%}
+
+
+### ============================================
+### E2E-F8-02 发送 Base64 图片
+### 功能点：验证支持 Base64 编码的图片
+### 前置条件：学生已登录
+### 预期结果：图片经过审核后，AI 正常回复
+### ============================================
+
+POST {{baseUrl}}/api/student/ai/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "session_id": "",
+  "messages": [
+    {
+      "role": "user",
+      "content": "请帮我分析这张图片中的代码\n[IMAGE:data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==]"
+    }
+  ]
+}
+
+> {%
+  client.test("E2E-F8-02: 发送Base64图片", function() {
+    client.assert(response.status === 200, "HTTP状态码应为200");
+    // Base64图片审核通过后应正常返回
+  });
+%}
